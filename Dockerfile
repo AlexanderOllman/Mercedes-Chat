@@ -27,7 +27,7 @@ EXPOSE 80
 EXPOSE 8080
 
 # Set the default Git repository URL
-ENV GIT_REPO_URL="https://github.com/your-username/your-repo.git"
+ENV GIT_REPO_URL="https://github.com/AlexanderOllman/Mercedes-Chat.git"
 
 # Add to your existing Dockerfile
 ENV PYTHONUNBUFFERED=1
