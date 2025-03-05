@@ -123,6 +123,15 @@
                         statusDiv.className = 'status success';
                         statusDiv.textContent = 'Page template has changed. Refreshing...';
                         setTimeout(() => window.location.reload(), 1000);
+                    } else if (data.templatesChanged) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Template files have changed. Refreshing...';
+                        // First, clear browser cache for this page
+                        fetch(window.location.href, { cache: 'reload', mode: 'no-cors' })
+                          .then(() => {
+                            // Force a complete page reload bypassing cache
+                            window.location.reload(true);
+                          });
                     } else {
                         statusDiv.className = 'status success';
                         statusDiv.textContent = 'Successfully pulled latest changes!';

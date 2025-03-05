@@ -6,6 +6,10 @@ import logging
 
 app = Flask(__name__)
 
+# Disable template caching to ensure templates are always reloaded
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -15,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    response = render_template('index.html')
+    # Add cache control headers to prevent browser caching
+    return response, {'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'}
 
 @app.route('/health')
 def health_check():
@@ -73,12 +79,14 @@ def pull_latest():
         ).stdout.splitlines()
         
         python_files_changed = any(f.endswith('.py') for f in changed_files)
+        template_files_changed = any('templates/' in f for f in changed_files)
         
         response = {
             'success': True,
             'message': result.stdout,
             'needsRestart': python_files_changed,
-            'changedFiles': changed_files
+            'changedFiles': changed_files,
+            'templatesChanged': template_files_changed
         }
         
         if python_files_changed:
@@ -86,6 +94,10 @@ def pull_latest():
             # Use os.execv to restart the current process
             logger.info("Python files changed, restarting application...")
             os.execv(sys.executable, ['python'] + sys.argv)
+        elif template_files_changed:
+            # Force refresh templates in memory
+            logger.info("Template files changed, clearing template cache...")
+            app.jinja_env.cache = {}
         
         return jsonify(response)
         
