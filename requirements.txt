@@ -6,3 +6,7 @@ eventlet
 huggingface_hub
 PyYAML
 boto3
+langchain
+faiss-cpu
+python-dotenv
+pillow

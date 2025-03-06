@@ -13,6 +13,15 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install additional dependencies for image processing
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libjpeg-dev \
+    libpng-dev \
+    libopenblas-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the current directory contents into the container at /app
 COPY . /app
 
@@ -21,6 +30,10 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Configure git globally
 RUN git config --global --add safe.directory /app
+
+# Create placeholder image directory if it doesn't exist
+RUN mkdir -p /app/static/img
+RUN touch /app/static/img/placeholder.jpg
 
 # Make port 80 and 8080 available
 EXPOSE 80
@@ -31,7 +44,8 @@ ENV GIT_REPO_URL="https://github.com/AlexanderOllman/Mercedes-Chat.git"
 
 # Add to your existing Dockerfile
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_ENV=development
+ENV FLASK_ENV=production
+ENV FLASK_DEBUG=0
 
 # Ensure the app has permissions to restart itself
 RUN chmod +x /app/app.py

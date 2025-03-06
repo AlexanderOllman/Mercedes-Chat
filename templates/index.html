@@ -3,63 +3,340 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto-Refresh App</title>
+    <title>Mercedes Image Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            text-align: center;
         }
-        h1 {
-            font-size: 3em;
-            margin-bottom: 40px;
+        
+        .container {
+            display: flex;
+            gap: 20px;
         }
-        .btn-refresh {
-            background-color: #4CAF50;
+        
+        .main-content {
+            flex: 3;
+        }
+        
+        .settings-panel {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .chat-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .search-button {
+            background-color: #00548c;
             color: white;
             padding: 15px 30px;
             border: none;
             border-radius: 4px;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
             transition: background-color 0.3s;
         }
+        
+        .search-button:hover {
+            background-color: #003362;
+        }
+        
+        .results-area {
+            margin-top: 30px;
+        }
+        
+        .carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .carousel-item {
+            flex: 0 0 auto;
+            width: 300px;
+            scroll-snap-align: start;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .carousel-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .carousel-caption {
+            padding: 15px;
+            background: white;
+        }
+        
+        .btn-refresh {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
         .btn-refresh:hover {
             background-color: #45a049;
         }
+        
         .btn-refresh:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
+        
         .status {
             margin-top: 20px;
             padding: 10px;
             border-radius: 4px;
         }
+        
         .status.success {
             background-color: #d4edda;
             color: #155724;
         }
+        
         .status.error {
             background-color: #f8d7da;
             color: #721c24;
         }
+        
         .status.info {
             background-color: #d1ecf1;
             color: #0c5460;
         }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .settings-title {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .save-settings {
+            background-color: #00548c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .save-settings:hover {
+            background-color: #003362;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px auto;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #00548c;
+            animation: spin 1s ease infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <h1>Hello, I'm Mercedes!</h1>
+    <h1>Mercedes Image Chatbot</h1>
     
-    <button id="refreshButton" class="btn-refresh">Refresh</button>
-    
-    <div id="status" class="status" style="display: none;"></div>
+    <div class="container">
+        <div class="main-content">
+            <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
+            <button id="searchButton" class="search-button">Search</button>
+            
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Searching for images...</p>
+            </div>
+            
+            <div class="results-area">
+                <h2>Results</h2>
+                <div id="resultsCarousel" class="carousel">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-panel">
+            <h3 class="settings-title">Settings</h3>
+            
+            <button id="refreshButton" class="btn-refresh">Refresh</button>
+            
+            <div id="status" class="status" style="display: none;"></div>
+            
+            <h4>S3 Configuration</h4>
+            <div>
+                <label for="s3Endpoint">S3 Endpoint URL:</label>
+                <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+            </div>
+            
+            <div>
+                <label for="s3AccessKey">Access Key ID:</label>
+                <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
+            </div>
+            
+            <div>
+                <label for="s3SecretKey">Secret Access Key:</label>
+                <input type="password" id="s3SecretKey" placeholder="Enter secret key">
+            </div>
+            
+            <div>
+                <label for="s3BucketName">Bucket Name:</label>
+                <input type="text" id="s3BucketName" placeholder="my-bucket">
+            </div>
+            
+            <button id="saveSettingsButton" class="save-settings">Save Settings</button>
+        </div>
+    </div>
     
     <script>
+        // Search functionality
+        document.getElementById('searchButton').addEventListener('click', async function() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) return;
+            
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsCarousel').innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        s3_endpoint: document.getElementById('s3Endpoint').value,
+                        aws_access_key_id: document.getElementById('s3AccessKey').value,
+                        aws_secret_access_key: document.getElementById('s3SecretKey').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                if (data.success) {
+                    displayResults(data.results);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                alert('Error performing search: ' + error);
+            }
+        });
+        
+        // Display results in carousel
+        function displayResults(results) {
+            const carousel = document.getElementById('resultsCarousel');
+            carousel.innerHTML = '';
+            
+            if (results.length === 0) {
+                carousel.innerHTML = '<p>No results found</p>';
+                return;
+            }
+            
+            results.forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'carousel-item';
+                
+                const img = document.createElement('img');
+                img.src = result.image;
+                img.alt = result.text;
+                
+                const caption = document.createElement('div');
+                caption.className = 'carousel-caption';
+                caption.textContent = result.text;
+                
+                item.appendChild(img);
+                item.appendChild(caption);
+                carousel.appendChild(item);
+            });
+        }
+        
+        // Settings functionality
+        document.getElementById('saveSettingsButton').addEventListener('click', async function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status info';
+            statusDiv.textContent = 'Saving settings...';
+            
+            try {
+                const response = await fetch('/api/update-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        s3_endpoint: document.getElementById('s3Endpoint').value,
+                        aws_access_key_id: document.getElementById('s3AccessKey').value,
+                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
+                        s3_bucket_name: document.getElementById('s3BucketName').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Settings saved successfully!';
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + data.error;
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error saving settings: ' + error;
+            }
+        });
+        
+        // Refresh button functionality (from existing code)
         document.getElementById('refreshButton').addEventListener('click', async function() {
             try {
                 const button = this;
@@ -151,6 +428,13 @@
                 statusDiv.style.display = 'block';
                 document.getElementById('refreshButton').disabled = false;
                 document.getElementById('refreshButton').textContent = 'Refresh';
+            }
+        });
+        
+        // Keyboard shortcut for search (Enter key)
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchButton').click();
             }
         });
     </script>

@@ -1,44 +1,81 @@
-# Auto-Refresh Flask Application
+# Mercedes Image Chatbot
 
-A simple Flask application that can refresh itself by pulling the latest code from GitHub without requiring a container redeployment.
+A simple chatbot application that searches for images based on textual descriptions. This application uses a vector database to find relevant images based on user queries and displays them in a carousel.
 
 ## Features
 
-- Single page with a "Hello!" header and a "Refresh" button
-- Clicking the "Refresh" button pulls the latest code from the configured GitHub repository
-- Automatically restarts the application if Python files change
-- Refreshes the page if HTML templates change
+- Search for images using natural language queries
+- Vector database search to find semantically similar content
+- Image retrieval from S3 bucket using boto3
+- Interactive image carousel display
+- Configurable S3 connection settings
+- Git-based application update mechanism
+
+## How It Works
+
+1. User enters a description of the images they're looking for
+2. The application searches a vector database containing image caption embeddings
+3. Matching image keys are retrieved from the vector database
+4. The application uses boto3 to fetch the actual images from an S3 bucket
+5. Images and their captions are displayed in a carousel
 
 ## Setup
 
-1. Clone this repository
-2. Update the `GIT_REPO_URL` environment variable in the Dockerfile or set it when running the container
-3. Build and deploy the container
+### Prerequisites
 
-## Building and Running
+- Python 3.7+
+- S3-compatible storage with appropriate credentials
+- Vector database with embedded image descriptions
 
-```bash
-# Build the Docker image
-docker build -t auto-refresh-app .
+### Installation
 
-# Run the container
-docker run -p 5000:5000 -e GIT_REPO_URL="https://github.com/your-username/your-repo.git" auto-refresh-app
+1. Clone this repository:
+   ```
+   git clone <repository-url>
+   cd MercedesChat
+   ```
+
+2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+3. Run the application:
+   ```
+   python app.py
+   ```
+
+4. Access the application at `http://localhost:8080`
+
+### Configuration
+
+The application can be configured using environment variables or through the settings panel in the user interface:
+
+- `S3_ENDPOINT_URL`: URL endpoint of your S3-compatible storage
+- `AWS_ACCESS_KEY_ID`: Access key for S3
+- `AWS_SECRET_ACCESS_KEY`: Secret key for S3
+- `S3_BUCKET_NAME`: Name of the bucket containing images
+- `GIT_REPO_URL`: URL of the repository for auto-updates
+
+## Vector Database Format
+
+The application expects a vector database with entries in the following format:
+
+```python
+{
+    's3_key': 'path/to/image.jpg',
+    'text': 'A description of the image content',
+    'vector': [0.1, 0.2, 0.3, ...]  # Embedding vector
+}
 ```
 
-## How it Works
+## Architecture
 
-1. When the "Refresh" button is clicked, the application makes a POST request to `/api/pull-latest`
-2. The server executes a `git pull` to fetch the latest code from the repository
-3. If Python files have changed, the server restarts itself using `os.execv`
-4. If only templates have changed, the page refreshes without a server restart
-5. The UI displays status messages throughout the process
+- Flask web application
+- FAISS for vector similarity search
+- boto3 for S3 interaction
+- JavaScript frontend with dynamic image loading
 
-## Usage in Kubernetes
+## License
 
-When deployed to Kubernetes, ensure that:
-
-1. The container has permissions to execute `git pull`
-2. The `GIT_REPO_URL` environment variable is set correctly
-3. The container has appropriate resources allocated
-# Mercedes-Chat
-# Mercedes-Chat
+This project is licensed under the MIT License - see the LICENSE file for details.
