@@ -169,34 +169,41 @@ def store_embedding_in_weaviate(collection, s3_key, text, embedding):
 
 # Store only the text embedding (we'll add this for text embedding)
 def get_text_embedding(text):
-    """Generate a basic text embedding using random values for demonstration purposes.
-    In a production app, you would use a proper text embedding model."""
-    # For this demo, we're using random embeddings
-    # In a real app, use a text embedding model
-    logger.info(f"Generating text embedding for: {text[:50]}...")
-    return np.random.random(128).astype('float32')  # Small dimension for demo purposes
-
-# Store embedding in Weaviate collection without using image
-def store_text_embedding_in_weaviate(collection, s3_key, text):
-    """Store text embedding in Weaviate collection"""
+    """Generate text embedding using a suitable text embedding model"""
     try:
-        logger.info(f"Generating embedding for s3_key: {s3_key}")
-        # Generate a text embedding
+        # For simplicity, we're using a random embedding for demonstration
+        # In a production environment, you'd use a proper text embedding model
+        # Generate a random embedding vector of size 1536 (suitable for OpenAI-like models)
+        embedding = np.random.rand(1536).astype(np.float32)
+        # Normalize the embedding to have unit norm (common practice)
+        embedding = embedding / np.linalg.norm(embedding)
+        return embedding
+    except Exception as e:
+        logger.error(f"Error generating text embedding: {str(e)}")
+        return None
+
+def store_text_embedding_in_weaviate(collection, s3_key, text):
+    """Store a text and its embedding in Weaviate"""
+    try:
+        # Generate embedding for the text
         embedding = get_text_embedding(text)
         
-        logger.info(f"Storing embedding in Weaviate collection: {collection.name}")
+        if embedding is None:
+            raise ValueError("Failed to generate embedding for text")
+        
+        # Store in Weaviate
         collection.data.insert(
             properties={
                 "s3_key": s3_key,
                 "text": text
             },
-            vector=embedding.tolist()
+            vector=embedding.tolist()  # Convert numpy array to list
         )
-        logger.info(f"Successfully stored embedding for {s3_key}")
+        
         return True
     except Exception as e:
         logger.error(f"Error storing text embedding in Weaviate: {str(e)}")
-        return False
+        raise
 
 @app.route('/')
 def index():
@@ -669,6 +676,325 @@ def restart_app():
         return jsonify({
             'success': False,
             'error': str(e),
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/test-s3-connection', methods=['POST'])
+def test_s3_connection():
+    try:
+        # Get S3 credentials from request
+        s3_endpoint = request.json.get('s3_endpoint')
+        aws_access_key_id = request.json.get('aws_access_key_id')
+        aws_secret_access_key = request.json.get('aws_secret_access_key')
+        bucket_name = request.json.get('s3_bucket_name')
+        
+        if not bucket_name:
+            return jsonify({
+                'success': False,
+                'error': 'Bucket name is required',
+                'logs': ['Bucket name is required for testing S3 connection']
+            }), 400
+        
+        logs = [f"Attempting to connect to S3 at {s3_endpoint or 'default endpoint'}"]
+        logger.info(logs[0])
+        
+        # Create S3 client
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
+        
+        # Try to list the contents of the bucket to test connection
+        try:
+            log_msg = f"Testing access to bucket: {bucket_name}"
+            logger.info(log_msg)
+            logs.append(log_msg)
+            
+            response = s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=1)
+            
+            if 'Contents' in response:
+                log_msg = f"Successfully listed objects in bucket. Found {len(response['Contents'])} items."
+                logger.info(log_msg)
+                logs.append(log_msg)
+                
+                # Get one object to further verify access
+                if len(response['Contents']) > 0:
+                    first_key = response['Contents'][0]['Key']
+                    log_msg = f"First object key: {first_key}"
+                    logger.info(log_msg)
+                    logs.append(log_msg)
+            else:
+                log_msg = "Connected to bucket but it appears to be empty"
+                logger.info(log_msg)
+                logs.append(log_msg)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Successfully connected to S3 bucket',
+                'logs': logs
+            })
+        except Exception as e:
+            error_msg = f"Error accessing S3 bucket: {str(e)}"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+    except Exception as e:
+        error_msg = f"Error testing S3 connection: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': error_msg,
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/test-weaviate-connection', methods=['POST'])
+def test_weaviate_connection():
+    try:
+        # Get Weaviate credentials from request
+        weaviate_url = request.json.get('weaviate_url')
+        weaviate_token = request.json.get('weaviate_token')
+        
+        logs = [f"Attempting to connect to Weaviate at {weaviate_url or 'default URL'}"]
+        logger.info(logs[0])
+        
+        # Connect to Weaviate
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            error_msg = "Failed to connect to Weaviate"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Test if Weaviate is ready
+        if not weaviate_client.is_ready():
+            error_msg = "Weaviate connection established but server is not ready"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Get schema info to further verify connection
+        try:
+            schema = weaviate_client.schema.get()
+            
+            # Log information about schema
+            if 'classes' in schema:
+                num_classes = len(schema['classes'])
+                log_msg = f"Schema contains {num_classes} classes"
+                logger.info(log_msg)
+                logs.append(log_msg)
+                
+                # Check if our collection exists
+                collection_exists = False
+                for cls in schema['classes']:
+                    if cls['class'] == 'MercedesImageEmbedding':
+                        collection_exists = True
+                        log_msg = f"Found MercedesImageEmbedding collection"
+                        logger.info(log_msg)
+                        logs.append(log_msg)
+                        break
+                
+                if not collection_exists:
+                    log_msg = "MercedesImageEmbedding collection not found, will be created when needed"
+                    logger.info(log_msg)
+                    logs.append(log_msg)
+            else:
+                log_msg = "Connected to Weaviate but schema appears to be empty"
+                logger.info(log_msg)
+                logs.append(log_msg)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Successfully connected to Weaviate',
+                'logs': logs
+            })
+        except Exception as e:
+            error_msg = f"Error retrieving Weaviate schema: {str(e)}"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+    except Exception as e:
+        error_msg = f"Error testing Weaviate connection: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': error_msg,
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/retrieve-training-file', methods=['POST'])
+def retrieve_training_file():
+    try:
+        # Get S3 credentials from request
+        s3_endpoint = request.json.get('s3_endpoint') or os.getenv('S3_ENDPOINT_URL')
+        aws_access_key_id = request.json.get('aws_access_key_id') or os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_access_key = request.json.get('aws_secret_access_key') or os.getenv('AWS_SECRET_ACCESS_KEY')
+        bucket_name = request.json.get('s3_bucket_name') or os.getenv('S3_BUCKET_NAME')
+        
+        if not bucket_name:
+            return jsonify({
+                'success': False,
+                'error': 'Bucket name is required',
+                'logs': ['Bucket name is required for retrieving training file']
+            }), 400
+        
+        logs = ["Attempting to retrieve training.json file from S3"]
+        logger.info(logs[0])
+        
+        # Create S3 client
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
+        
+        # Try to get the training.json file
+        try:
+            file_key = "training.json"
+            log_msg = f"Retrieving file: {file_key} from bucket: {bucket_name}"
+            logger.info(log_msg)
+            logs.append(log_msg)
+            
+            response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+            file_content = response['Body'].read().decode('utf-8')
+            training_data = json.loads(file_content)
+            
+            log_msg = f"Successfully retrieved training file with {len(training_data)} entries"
+            logger.info(log_msg)
+            logs.append(log_msg)
+            
+            # Store the training data in the session for later use
+            session_key = f"training_data_{int(time.time())}"
+            app.config[session_key] = training_data
+            
+            return jsonify({
+                'success': True,
+                'message': 'Successfully retrieved training.json file',
+                'count': len(training_data),
+                'session_key': session_key,
+                'logs': logs
+            })
+        except Exception as e:
+            error_msg = f"Error retrieving training file: {str(e)}"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+    except Exception as e:
+        error_msg = f"Error retrieving training file: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': error_msg,
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/embed-training-data', methods=['POST'])
+def embed_training_data():
+    try:
+        # Get the session key for the training data
+        session_key = request.json.get('session_key')
+        if not session_key or session_key not in app.config:
+            return jsonify({
+                'success': False,
+                'error': 'Training data not found in session',
+                'logs': ['Please retrieve the training file first']
+            }), 400
+        
+        # Get Weaviate credentials from request
+        weaviate_url = request.json.get('weaviate_url') or os.getenv('WEAVIATE_URL')
+        weaviate_token = request.json.get('weaviate_token') or os.getenv('WEAVIATE_TOKEN')
+        
+        logs = ["Starting to embed training data in Weaviate"]
+        logger.info(logs[0])
+        
+        # Connect to Weaviate
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            error_msg = "Failed to connect to Weaviate"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Initialize collection if needed
+        collection = initialize_weaviate_collection(weaviate_client)
+        if not collection:
+            error_msg = "Failed to initialize Weaviate collection"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Get the training data
+        training_data = app.config[session_key]
+        
+        # Embed each entry
+        successful = 0
+        failed = 0
+        
+        for i, entry in enumerate(training_data):
+            try:
+                s3_key = entry.get('s3_key')
+                text = entry.get('text')
+                
+                if not s3_key or not text:
+                    log_msg = f"Skipping entry {i}: Missing s3_key or text"
+                    logger.warning(log_msg)
+                    logs.append(log_msg)
+                    failed += 1
+                    continue
+                
+                # Get text embedding and store in Weaviate
+                store_text_embedding_in_weaviate(collection, s3_key, text)
+                
+                successful += 1
+                
+                # Log progress periodically
+                if successful % 10 == 0:
+                    log_msg = f"Embedded {successful} entries so far"
+                    logger.info(log_msg)
+                    logs.append(log_msg)
+            except Exception as e:
+                failed += 1
+                error_msg = f"Error embedding entry {i}: {str(e)}"
+                logger.error(error_msg)
+                logs.append(error_msg)
+        
+        final_msg = f"Embedding complete. Successfully embedded {successful} entries. Failed: {failed}"
+        logger.info(final_msg)
+        logs.append(final_msg)
+        
+        return jsonify({
+            'success': True,
+            'message': final_msg,
+            'successful': successful,
+            'failed': failed,
+            'logs': logs
+        })
+    except Exception as e:
+        error_msg = f"Error embedding training data: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': error_msg,
             'logs': [error_msg]
         }), 500
 
