@@ -596,6 +596,14 @@ def pull_latest():
         # Stash any local changes
         subprocess.run(['git', 'stash'], cwd=app_dir)
         
+        # Get the current commit hash before pull
+        before_pull_hash = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
         # Run git pull
         result = subprocess.run(
             ['git', 'pull', 'origin', 'main'],
@@ -613,13 +621,25 @@ def pull_latest():
                 'logs': [error_msg]
             })
         
-        # Check what files changed
-        changed_files = subprocess.run(
-            ['git', 'diff', '--name-only', 'HEAD@{1}', 'HEAD'],
+        # Get the commit hash after pull
+        after_pull_hash = subprocess.run(
+            ['git', 'rev-parse', 'HEAD'],
             cwd=app_dir,
             capture_output=True,
             text=True
-        ).stdout.splitlines()
+        ).stdout.strip()
+        
+        changed_files = []
+        
+        # Only check for changes if the commit hash changed (meaning new changes were pulled)
+        if before_pull_hash != after_pull_hash:
+            # Check what files changed between the two commits
+            changed_files = subprocess.run(
+                ['git', 'diff', '--name-only', before_pull_hash, after_pull_hash],
+                cwd=app_dir,
+                capture_output=True,
+                text=True
+            ).stdout.splitlines()
         
         python_files_changed = any(f.endswith('.py') for f in changed_files)
         template_files_changed = any('templates/' in f for f in changed_files)
