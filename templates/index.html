@@ -620,7 +620,7 @@
             button.textContent = 'Embed Text Data';
         });
         
-        // Refresh button functionality (from existing code)
+        // Refresh button functionality
         document.getElementById('refreshButton').addEventListener('click', async function() {
             try {
                 const button = this;
@@ -636,15 +636,47 @@
                 statusDiv.style.display = 'block';
                 
                 // Make API call to pull latest changes
-                const response = await fetch('/api/pull-latest', {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
+                let data;
+                try {
+                    const response = await fetch('/api/pull-latest', {
+                        method: 'POST'
+                    });
+                    
+                    if (!response.ok) {
+                        if (response.status === 503) {
+                            // This is likely the server restarting
+                            logMessage('Server is restarting (503 Service Unavailable). This is expected.', 'warning');
+                            statusDiv.className = 'status info';
+                            statusDiv.textContent = 'Application is restarting. Please wait...';
+                            
+                            // Skip trying to parse JSON and jump straight to polling
+                            await handleServerRestart();
+                            return;
+                        } else {
+                            throw new Error(`Server returned status ${response.status}`);
+                        }
+                    }
+                    
+                    data = await response.json();
+                    
+                    // Process server logs if available
+                    if (data.logs) {
+                        processServerLogs(data.logs);
+                    }
+                } catch (fetchError) {
+                    // If we get an error at this point, it might be that the server is restarting
+                    if (fetchError.message.includes('JSON') || fetchError.message.includes('Unexpected token')) {
+                        logMessage('Error parsing response, server might be restarting. Continuing with restart sequence...', 'warning');
+                        statusDiv.className = 'status info';
+                        statusDiv.textContent = 'Application is restarting. Please wait...';
+                        
+                        // Handle as a restart case
+                        await handleServerRestart();
+                        return;
+                    } else {
+                        // Rethrow for the outer catch block
+                        throw fetchError;
+                    }
                 }
                 
                 if (data.success) {
@@ -678,43 +710,7 @@
                             logMessage('Server restarting...', 'info');
                         }
                         
-                        // Wait a moment for the server to restart
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                        
-                        // Start polling to check if the server is back up
-                        let attempts = 0;
-                        const maxAttempts = 12; // 1 minute total (12 * 5 seconds)
-                        
-                        const checkServer = async () => {
-                            try {
-                                logMessage(`Checking if server is back up (attempt ${attempts + 1}/${maxAttempts})`);
-                                // Use the health check endpoint
-                                const healthCheck = await fetch('/health');
-                                if (healthCheck.ok) {
-                                    const healthData = await healthCheck.json();
-                                    if (healthData.status === 'ok') {
-                                        logMessage('Server is back up, reloading page');
-                                        window.location.reload();
-                                        return;
-                                    }
-                                }
-                            } catch (error) {
-                                logMessage('Server not ready yet', 'warning');
-                            }
-                            
-                            attempts++;
-                            if (attempts < maxAttempts) {
-                                setTimeout(checkServer, 5000);
-                            } else {
-                                statusDiv.className = 'status error';
-                                statusDiv.textContent = 'Server restart is taking longer than expected. Please refresh the page manually.';
-                                logMessage('Server restart timeout', 'error');
-                                button.disabled = false;
-                                button.textContent = 'Refresh';
-                            }
-                        };
-                        
-                        checkServer();
+                        await handleServerRestart();
                     } else if (data.changedFiles && data.changedFiles.includes('templates/index.html')) {
                         statusDiv.className = 'status success';
                         statusDiv.textContent = 'Page template has changed. Refreshing...';
@@ -754,6 +750,55 @@
                 document.getElementById('refreshButton').textContent = 'Refresh';
             }
         });
+        
+        // Function to handle server restart and polling
+        async function handleServerRestart() {
+            const statusDiv = document.getElementById('status');
+            const button = document.getElementById('refreshButton');
+            
+            // Wait a moment for the server to restart
+            logMessage('Waiting for server to restart...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Start polling to check if the server is back up
+            let attempts = 0;
+            const maxAttempts = 24; // 2 minutes total (24 * 5 seconds)
+            
+            const checkServer = async () => {
+                try {
+                    logMessage(`Checking if server is back up (attempt ${attempts + 1}/${maxAttempts})`);
+                    // Use the health check endpoint
+                    const healthCheck = await fetch('/health');
+                    if (healthCheck.ok) {
+                        try {
+                            const healthData = await healthCheck.json();
+                            if (healthData.status === 'ok') {
+                                logMessage('Server is back up, reloading page');
+                                window.location.reload();
+                                return;
+                            }
+                        } catch (e) {
+                            logMessage('Server responded but not with valid JSON, waiting...', 'warning');
+                        }
+                    }
+                } catch (error) {
+                    logMessage('Server not ready yet', 'warning');
+                }
+                
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(checkServer, 5000);
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Server restart is taking longer than expected. Please refresh the page manually.';
+                    logMessage('Server restart timeout', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Refresh';
+                }
+            };
+            
+            checkServer();
+        }
         
         // Keyboard shortcut for search (Enter key)
         document.getElementById('queryInput').addEventListener('keypress', function(e) {

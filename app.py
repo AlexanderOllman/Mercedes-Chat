@@ -5,6 +5,7 @@ import sys
 import logging
 import json
 import boto3
+import time
 from io import BytesIO
 import base64
 from PIL import Image
@@ -500,7 +501,8 @@ def pull_latest():
         if not remote_url:
             return jsonify({
                 'success': False,
-                'error': 'GIT_REPO_URL environment variable not set'
+                'error': 'GIT_REPO_URL environment variable not set',
+                'logs': ['GIT_REPO_URL environment variable not set']
             })
         
         # Check if we have write permissions
@@ -510,9 +512,12 @@ def pull_latest():
                 f.write('test')
             os.remove(test_file)
         except Exception as e:
+            error_msg = f'No write permissions in application directory: {str(e)}'
+            logger.error(error_msg)
             return jsonify({
                 'success': False,
-                'error': f'No write permissions in application directory: {str(e)}'
+                'error': error_msg,
+                'logs': [error_msg]
             })
 
         # Stash any local changes
@@ -527,9 +532,12 @@ def pull_latest():
         )
         
         if result.returncode != 0:
+            error_msg = f'Git pull failed: {result.stderr}'
+            logger.error(error_msg)
             return jsonify({
                 'success': False,
-                'error': f'Git pull failed: {result.stderr}'
+                'error': error_msg,
+                'logs': [error_msg]
             })
         
         # Check what files changed
@@ -548,6 +556,8 @@ def pull_latest():
         log_message = f"Changed files: {', '.join(changed_files)}" if changed_files else "No files changed"
         logger.info(log_message)
         
+        logs = [log_message]
+        
         response = {
             'success': True,
             'message': result.stdout,
@@ -555,49 +565,64 @@ def pull_latest():
             'changedFiles': changed_files,
             'templatesChanged': template_files_changed,
             'requirementsChanged': requirements_changed,
-            'logs': [log_message]
+            'logs': logs
         }
         
         # If requirements.txt changed, install updated requirements
         if requirements_changed:
-            logger.info("requirements.txt changed, installing updated dependencies...")
-            response['logs'].append("requirements.txt changed, installing updated dependencies...")
+            req_log_msg = "requirements.txt changed, installing updated dependencies..."
+            logger.info(req_log_msg)
+            logs.append(req_log_msg)
             
-            # Run pip install -r requirements.txt
-            pip_result = subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', '-r', os.path.join(app_dir, 'requirements.txt')],
-                capture_output=True,
-                text=True
-            )
-            
-            if pip_result.returncode != 0:
-                error_msg = f"Failed to install requirements: {pip_result.stderr}"
+            # Use a non-blocking approach to show status while pip runs
+            try:
+                # Run pip install -r requirements.txt
+                pip_process = subprocess.Popen(
+                    [sys.executable, '-m', 'pip', 'install', '-r', os.path.join(app_dir, 'requirements.txt')],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                # Get output with a timeout to avoid hanging
+                try:
+                    stdout, stderr = pip_process.communicate(timeout=60)
+                    if pip_process.returncode != 0:
+                        error_msg = f"Failed to install requirements: {stderr}"
+                        logger.error(error_msg)
+                        logs.append(error_msg)
+                        response['success'] = False
+                        response['error'] = error_msg
+                    else:
+                        success_msg = "Successfully installed updated requirements"
+                        logger.info(success_msg)
+                        logs.append(success_msg)
+                except subprocess.TimeoutExpired:
+                    pip_process.kill()
+                    warning_msg = "Pip install is taking too long, proceeding with restart anyway"
+                    logger.warning(warning_msg)
+                    logs.append(warning_msg)
+            except Exception as e:
+                error_msg = f"Error during pip install: {str(e)}"
                 logger.error(error_msg)
-                response['logs'].append(error_msg)
-                return jsonify({
-                    'success': False,
-                    'error': error_msg,
-                    'logs': response['logs']
-                }), 500
-            else:
-                success_msg = "Successfully installed updated requirements"
-                logger.info(success_msg)
-                response['logs'].append(success_msg)
+                logs.append(error_msg)
+                # Continue with restart despite pip error - it might work
+        
+        # Update the logs in the response
+        response['logs'] = logs
         
         if python_files_changed or requirements_changed:
             # If Python files or requirements changed, we need to restart
-            # Use os.execv to restart the current process
             logger.info("Python files or requirements changed, restarting application...")
-            response['logs'].append("Restarting application with new code/dependencies...")
+            logs.append("Restarting application with new code/dependencies...")
+            response['logs'] = logs
             
-            # Return the response first, then restart
+            # Return the response but don't restart yet - the client will call /api/restart
             return jsonify(response)
-            # The actual restart will be handled by the client-side javascript
-            # which will poll the health endpoint until the server is back up
         elif template_files_changed:
             # Force refresh templates in memory
             logger.info("Template files changed, clearing template cache...")
-            response['logs'].append("Template files changed, clearing template cache...")
+            logs.append("Template files changed, clearing template cache...")
             app.jinja_env.cache = {}
         
         return jsonify(response)
@@ -617,12 +642,26 @@ def restart_app():
         cause = request.json.get('cause', 'unknown')
         logger.info(f"Received request to restart the application. Cause: {cause}")
         
-        # Use os.execv to restart the current process
-        os.execv(sys.executable, ['python'] + sys.argv)
+        # Create a delayed restart to allow the response to be sent first
+        def delayed_restart():
+            time.sleep(1)  # Wait 1 second to allow the response to be sent
+            logger.info("Executing delayed restart...")
+            try:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception as e:
+                logger.error(f"Error during restart: {str(e)}")
         
-        # This code will never be reached as the process will be restarted
+        # Start a background thread to restart the server
+        import threading
+        thread = threading.Thread(target=delayed_restart)
+        thread.daemon = True
+        thread.start()
+        
+        # Send the success response before restarting
         return jsonify({
-            'success': True
+            'success': True,
+            'message': 'Restarting server...',
+            'logs': ['Restart triggered, server will restart momentarily']
         })
     except Exception as e:
         error_msg = f"Error restarting application: {str(e)}"
