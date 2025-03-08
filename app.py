@@ -8,9 +8,13 @@ import boto3
 from io import BytesIO
 import base64
 from PIL import Image
-import faiss
 import numpy as np
 from dotenv import load_dotenv
+import weaviate
+import tensorflow as tf
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input
+from tensorflow.keras.preprocessing.image import img_to_array
 
 # Load environment variables
 load_dotenv()
@@ -28,56 +32,73 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Vector database setup
-class VectorDatabase:
-    def __init__(self):
-        self.index = None
-        self.data = []
-        self.dimension = 128  # Example dimension, adjust based on your embedding size
-        
-    def initialize(self):
-        """Initialize an empty FAISS index"""
-        self.index = faiss.IndexFlatL2(self.dimension)
-        logger.info("Vector database initialized")
-        
-    def load_data(self, data_path=None):
-        """Load sample data or use provided data path"""
-        # For testing, we'll use some sample data
-        if not data_path:
-            self.data = [
-                {'s3_key': 'sample/image1.jpg', 'text': 'A photo of a beach', 'vector': np.random.random(self.dimension).astype('float32')},
-                {'s3_key': 'sample/image2.jpg', 'text': 'A photo of a mountain', 'vector': np.random.random(self.dimension).astype('float32')},
-                {'s3_key': 'sample/image3.jpg', 'text': 'A photo of a floor', 'vector': np.random.random(self.dimension).astype('float32')},
-                {'s3_key': 'sample/image4.jpg', 'text': 'A photo of a car', 'vector': np.random.random(self.dimension).astype('float32')},
-                {'s3_key': 'sample/image5.jpg', 'text': 'A photo of a building', 'vector': np.random.random(self.dimension).astype('float32')}
-            ]
-        else:
-            # Load from file
-            with open(data_path, 'r') as f:
-                self.data = json.load(f)
-        
-        # Add vectors to index
-        vectors = np.array([item['vector'] for item in self.data]).astype('float32')
-        self.index.add(vectors)
-        logger.info(f"Loaded {len(self.data)} items into vector database")
-    
-    def search(self, query_vector, top_k=5):
-        """Search for similar items"""
-        # In a real app, you would compute embeddings for the query
-        # For demo, we'll just use a random vector
-        query_vector = np.random.random(self.dimension).astype('float32').reshape(1, -1)
-        
-        # Search the index
-        distances, indices = self.index.search(query_vector, top_k)
-        
-        # Return the results
-        results = [self.data[idx] for idx in indices[0]]
-        return results
+# Embedding model setup
+def load_embedding_model():
+    model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
+    return model
 
-# Initialize the vector database
-vector_db = VectorDatabase()
-vector_db.initialize()
-vector_db.load_data()
+# Initialize the embedding model
+embedding_model = load_embedding_model()
+
+# Weaviate client setup
+def connect_to_weaviate(weaviate_url=None, weaviate_token=None):
+    """Connect to Weaviate instance using provided credentials or environment variables"""
+    url = weaviate_url or os.getenv('WEAVIATE_URL', 'weaviate.poc-weaviate.svc.cluster.local')
+    token = weaviate_token or os.getenv('WEAVIATE_TOKEN')
+    
+    headers = {}
+    if token:
+        headers["x-auth-token"] = token
+    
+    try:
+        client = weaviate.connect_to_custom(
+            http_host=url,
+            http_port=80,
+            http_secure=False,
+            grpc_host=f"{url}-grpc.poc-weaviate.svc.cluster.local" if '-grpc' not in url else url,
+            grpc_port=50051,
+            grpc_secure=False,
+            headers=headers,
+            skip_init_checks=False
+        )
+        
+        if client.is_ready():
+            logger.info("Successfully connected to Weaviate")
+            return client
+        else:
+            logger.error("Failed to connect to Weaviate")
+            return None
+    except Exception as e:
+        logger.error(f"Error connecting to Weaviate: {str(e)}")
+        return None
+
+# Initialize Weaviate collection
+def initialize_weaviate_collection(client, collection_name="MercedesImageEmbedding"):
+    """Initialize or get the Weaviate collection"""
+    import weaviate.classes.config as wc
+    from weaviate.classes.config import Configure, DataType, Property
+    
+    try:
+        # Check if collection exists
+        if client.collections.exists(collection_name):
+            logger.info(f"Collection {collection_name} already exists")
+            return client.collections.get(collection_name)
+        
+        # Create collection
+        client.collections.create(
+            name=collection_name,
+            properties=[
+                Property(name="s3_key", data_type=DataType.TEXT),
+                Property(name="text", data_type=DataType.TEXT),
+            ],
+            vectorizer_config=wc.Configure.Vectorizer.none(),
+        )
+        
+        logger.info(f"Created collection {collection_name}")
+        return client.collections.get(collection_name)
+    except Exception as e:
+        logger.error(f"Error initializing Weaviate collection: {str(e)}")
+        return None
 
 # S3 client function
 def get_s3_client(endpoint_url=None, aws_access_key_id=None, aws_secret_access_key=None):
@@ -96,6 +117,86 @@ def get_s3_client(endpoint_url=None, aws_access_key_id=None, aws_secret_access_k
     )
     return s3_client
 
+# Image processing functions
+def read_image_from_s3(s3_client, bucket_name, object_key):
+    """Read image from S3 bucket"""
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+        image_content = response['Body'].read()
+        image = Image.open(BytesIO(image_content))
+        return image
+    except Exception as e:
+        logger.error(f"Error reading image from S3: {str(e)}")
+        return None
+
+def image_to_numpy_array(image, target_size=(224, 224)):
+    """Convert image to numpy array for embedding"""
+    try:
+        image = image.resize(target_size)
+        image = image.convert('RGB')  # Ensure image is in RGB format
+        img_array = img_to_array(image)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = preprocess_input(img_array)
+        return img_array
+    except Exception as e:
+        logger.error(f"Error converting image to numpy array: {str(e)}")
+        return None
+
+def get_image_embedding(model, img_array):
+    """Generate embedding from image array"""
+    try:
+        embedding = model.predict(img_array)
+        return embedding.flatten()
+    except Exception as e:
+        logger.error(f"Error generating image embedding: {str(e)}")
+        return None
+
+def store_embedding_in_weaviate(collection, s3_key, text, embedding):
+    """Store embedding in Weaviate collection"""
+    try:
+        collection.data.insert(
+            properties={
+                "s3_key": s3_key,
+                "text": text
+            },
+            vector=embedding.tolist()
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Error storing embedding in Weaviate: {str(e)}")
+        return False
+
+# Store only the text embedding (we'll add this for text embedding)
+def get_text_embedding(text):
+    """Generate a basic text embedding using random values for demonstration purposes.
+    In a production app, you would use a proper text embedding model."""
+    # For this demo, we're using random embeddings
+    # In a real app, use a text embedding model
+    logger.info(f"Generating text embedding for: {text[:50]}...")
+    return np.random.random(128).astype('float32')  # Small dimension for demo purposes
+
+# Store embedding in Weaviate collection without using image
+def store_text_embedding_in_weaviate(collection, s3_key, text):
+    """Store text embedding in Weaviate collection"""
+    try:
+        logger.info(f"Generating embedding for s3_key: {s3_key}")
+        # Generate a text embedding
+        embedding = get_text_embedding(text)
+        
+        logger.info(f"Storing embedding in Weaviate collection: {collection.name}")
+        collection.data.insert(
+            properties={
+                "s3_key": s3_key,
+                "text": text
+            },
+            vector=embedding.tolist()
+        )
+        logger.info(f"Successfully stored embedding for {s3_key}")
+        return True
+    except Exception as e:
+        logger.error(f"Error storing text embedding in Weaviate: {str(e)}")
+        return False
+
 @app.route('/')
 def index():
     response = render_template('index.html')
@@ -110,68 +211,228 @@ def health_check():
 def chat():
     try:
         query = request.json.get('query', '')
-        logger.info(f"Received query: {query}")
+        logger.info(f"Received search query: {query}")
         
-        # Search the vector database
-        results = vector_db.search(query, top_k=5)
-        
-        # Get S3 credentials from request if available
-        endpoint_url = request.json.get('s3_endpoint')
+        # Get S3 and Weaviate credentials from request
+        s3_endpoint = request.json.get('s3_endpoint')
         aws_access_key_id = request.json.get('aws_access_key_id')
         aws_secret_access_key = request.json.get('aws_secret_access_key')
+        bucket_name = request.json.get('s3_bucket_name') or os.getenv('S3_BUCKET_NAME', 'default-bucket')
+        weaviate_url = request.json.get('weaviate_url')
+        weaviate_token = request.json.get('weaviate_token')
         
+        logger.info(f"Connecting to Weaviate at: {weaviate_url or 'default URL'}")
+        # Connect to Weaviate
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            logger.error("Failed to connect to Weaviate")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Weaviate',
+                'logs': ['Failed to connect to Weaviate server']
+            }), 500
+        
+        logger.info("Getting Weaviate collection")
+        # Get Weaviate collection
+        collection = initialize_weaviate_collection(weaviate_client)
+        if not collection:
+            logger.error("Failed to initialize Weaviate collection")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize Weaviate collection',
+                'logs': ['Failed to initialize or access Weaviate collection']
+            }), 500
+        
+        logger.info("Generating text embedding for query")
+        # Generate a text embedding for the query
+        query_embedding = get_text_embedding(query)
+        
+        logger.info("Searching Weaviate for similar items")
+        # Search Weaviate for similar items
+        results = collection.query.near_vector(
+            near_vector=query_embedding.tolist(),
+            limit=5
+        ).do()
+        
+        logger.info(f"Connecting to S3 at: {s3_endpoint or 'default endpoint'}")
         # Get S3 client
-        s3_client = get_s3_client(endpoint_url, aws_access_key_id, aws_secret_access_key)
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
         
         # Process the results to include image data
         processed_results = []
-        for result in results:
-            try:
-                # Get the image from S3
-                s3_key = result['s3_key']
-                bucket = os.getenv('S3_BUCKET_NAME', 'default-bucket')
-                
-                # For the demo, we'll use placeholder images if S3 isn't configured
-                image_data = None
+        logs = []
+        
+        if results and 'data' in results and 'Get' in results['data'] and collection.name in results['data']['Get']:
+            result_items = results['data']['Get'][collection.name]
+            logger.info(f"Found {len(result_items)} matching results")
+            logs.append(f"Found {len(result_items)} matching results in Weaviate")
+            
+            for idx, result in enumerate(result_items):
                 try:
-                    response = s3_client.get_object(Bucket=bucket, Key=s3_key)
-                    image_data = response['Body'].read()
-                except Exception as e:
-                    logger.warning(f"Error retrieving image from S3: {str(e)}")
-                    # Use a placeholder image
-                    placeholder_path = os.path.join('static', 'img', 'placeholder.jpg')
-                    if os.path.exists(placeholder_path):
-                        with open(placeholder_path, 'rb') as f:
-                            image_data = f.read()
-                
-                if image_data:
-                    # Convert image to base64 for embedding in HTML
+                    # Get the image from S3
+                    s3_key = result.get('s3_key')
+                    logs.append(f"Processing result {idx+1}: s3_key={s3_key}")
+                    
+                    # For the demo, we'll use placeholder images if S3 isn't configured
+                    image_data = None
                     try:
-                        # Try to open with PIL to handle format conversion if needed
-                        img = Image.open(BytesIO(image_data))
-                        buffer = BytesIO()
-                        img.save(buffer, format="JPEG")
-                        img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                        logger.info(f"Retrieving image from S3: {s3_key}")
+                        logs.append(f"Retrieving image from S3 bucket: {bucket_name}")
+                        
+                        image = read_image_from_s3(s3_client, bucket_name, s3_key)
+                        if image:
+                            logger.info(f"Successfully retrieved image: {s3_key}")
+                            logs.append(f"Successfully retrieved image from S3")
+                            
+                            buffer = BytesIO()
+                            image.save(buffer, format="JPEG")
+                            image_data = buffer.getvalue()
+                    except Exception as e:
+                        error_msg = f"Error retrieving image from S3: {str(e)}"
+                        logger.warning(error_msg)
+                        logs.append(error_msg)
+                        
+                        # Use a placeholder image
+                        placeholder_path = os.path.join('static', 'img', 'placeholder.jpg')
+                        if os.path.exists(placeholder_path):
+                            logger.info("Using placeholder image")
+                            logs.append("Using placeholder image instead")
+                            with open(placeholder_path, 'rb') as f:
+                                image_data = f.read()
+                    
+                    if image_data:
+                        # Convert image to base64 for embedding in HTML
+                        img_str = base64.b64encode(image_data).decode('utf-8')
                         
                         processed_results.append({
                             's3_key': s3_key,
-                            'text': result['text'],
+                            'text': result.get('text', 'No description available'),
                             'image': f"data:image/jpeg;base64,{img_str}"
                         })
-                    except Exception as e:
-                        logger.error(f"Error processing image: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error processing result {result}: {str(e)}")
+                        logs.append(f"Result {idx+1} processed successfully")
+                except Exception as e:
+                    error_msg = f"Error processing result: {str(e)}"
+                    logger.error(error_msg)
+                    logs.append(error_msg)
+        else:
+            logger.warning("No results found or invalid response format")
+            logs.append("No matching results found in Weaviate")
         
         return jsonify({
             'success': True,
-            'results': processed_results
+            'results': processed_results,
+            'logs': logs
         })
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
+        error_msg = f"Error in chat endpoint: {str(e)}"
+        logger.error(error_msg)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/embed', methods=['POST'])
+def embed_data():
+    try:
+        # Get Weaviate credentials from request
+        weaviate_url = request.json.get('weaviate_url')
+        weaviate_token = request.json.get('weaviate_token')
+        dataset = request.json.get('dataset', [])
+        
+        logs = []
+        
+        # Validate dataset
+        if not dataset or not isinstance(dataset, list):
+            logger.error("Invalid dataset format")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid dataset format. Expected a list of items with s3_key and text fields.',
+                'logs': ['Invalid dataset format. Expected a list of items with s3_key and text fields.']
+            }), 400
+        
+        logger.info(f"Processing {len(dataset)} dataset items")
+        logs.append(f"Processing {len(dataset)} dataset items for embedding")
+        
+        # Connect to Weaviate
+        logger.info(f"Connecting to Weaviate at {weaviate_url or 'default URL'}")
+        logs.append(f"Connecting to Weaviate at {weaviate_url or 'default URL'}")
+        
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            logger.error("Failed to connect to Weaviate")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Weaviate',
+                'logs': logs + ['Failed to connect to Weaviate server']
+            }), 500
+        
+        # Get Weaviate collection
+        logger.info("Initializing Weaviate collection")
+        logs.append("Initializing Weaviate collection")
+        
+        collection = initialize_weaviate_collection(weaviate_client)
+        if not collection:
+            logger.error("Failed to initialize Weaviate collection")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize Weaviate collection',
+                'logs': logs + ['Failed to initialize or access Weaviate collection']
+            }), 500
+        
+        # Process and embed each item in the dataset (text only)
+        success_count = 0
+        error_count = 0
+        for idx, item in enumerate(dataset):
+            try:
+                s3_key = item.get('s3_key')
+                text = item.get('text', 'No description')
+                
+                log_prefix = f"Item {idx+1}/{len(dataset)}"
+                
+                if not s3_key:
+                    warning_msg = f"{log_prefix}: Skipping item without s3_key"
+                    logger.warning(warning_msg)
+                    logs.append(warning_msg)
+                    error_count += 1
+                    continue
+                
+                logger.info(f"{log_prefix}: Processing item with s3_key={s3_key}")
+                logs.append(f"{log_prefix}: Processing item with s3_key={s3_key}")
+                
+                # Store in Weaviate using text embedding instead of image
+                if store_text_embedding_in_weaviate(collection, s3_key, text):
+                    success_msg = f"{log_prefix}: Successfully embedded"
+                    logger.info(success_msg)
+                    logs.append(success_msg)
+                    success_count += 1
+                else:
+                    error_msg = f"{log_prefix}: Failed to embed"
+                    logger.error(error_msg)
+                    logs.append(error_msg)
+                    error_count += 1
+            except Exception as e:
+                error_msg = f"Item {idx+1}: Error processing item: {str(e)}"
+                logger.error(error_msg)
+                logs.append(error_msg)
+                error_count += 1
+        
+        result_msg = f'Text embedding complete. Successfully embedded {success_count} items. Failed: {error_count}.'
+        logger.info(result_msg)
+        logs.append(result_msg)
+        
+        return jsonify({
+            'success': True,
+            'message': result_msg,
+            'logs': logs
+        })
+    except Exception as e:
+        error_msg = f"Error in embed endpoint: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'logs': [error_msg]
         }), 500
 
 @app.route('/api/update-settings', methods=['POST'])
@@ -190,6 +451,19 @@ def update_settings():
         # Try to list buckets to verify connection
         s3_client.list_buckets()
         
+        # Test Weaviate connection if credentials provided
+        if settings.get('weaviate_url'):
+            weaviate_client = connect_to_weaviate(
+                weaviate_url=settings.get('weaviate_url'),
+                weaviate_token=settings.get('weaviate_token')
+            )
+            
+            if not weaviate_client:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to connect to Weaviate with provided credentials'
+                }), 400
+        
         # Store settings in environment variables (for this session only)
         if settings.get('s3_endpoint'):
             os.environ['S3_ENDPOINT_URL'] = settings.get('s3_endpoint')
@@ -199,6 +473,10 @@ def update_settings():
             os.environ['AWS_SECRET_ACCESS_KEY'] = settings.get('aws_secret_access_key')
         if settings.get('s3_bucket_name'):
             os.environ['S3_BUCKET_NAME'] = settings.get('s3_bucket_name')
+        if settings.get('weaviate_url'):
+            os.environ['WEAVIATE_URL'] = settings.get('weaviate_url')
+        if settings.get('weaviate_token'):
+            os.environ['WEAVIATE_TOKEN'] = settings.get('weaviate_token')
         
         return jsonify({
             'success': True,
@@ -264,32 +542,95 @@ def pull_latest():
         
         python_files_changed = any(f.endswith('.py') for f in changed_files)
         template_files_changed = any('templates/' in f for f in changed_files)
+        requirements_changed = 'requirements.txt' in changed_files
+        
+        # Log the changes
+        log_message = f"Changed files: {', '.join(changed_files)}" if changed_files else "No files changed"
+        logger.info(log_message)
         
         response = {
             'success': True,
             'message': result.stdout,
-            'needsRestart': python_files_changed,
+            'needsRestart': python_files_changed or requirements_changed,
             'changedFiles': changed_files,
-            'templatesChanged': template_files_changed
+            'templatesChanged': template_files_changed,
+            'requirementsChanged': requirements_changed,
+            'logs': [log_message]
         }
         
-        if python_files_changed:
-            # If Python files changed, we need to restart
+        # If requirements.txt changed, install updated requirements
+        if requirements_changed:
+            logger.info("requirements.txt changed, installing updated dependencies...")
+            response['logs'].append("requirements.txt changed, installing updated dependencies...")
+            
+            # Run pip install -r requirements.txt
+            pip_result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'install', '-r', os.path.join(app_dir, 'requirements.txt')],
+                capture_output=True,
+                text=True
+            )
+            
+            if pip_result.returncode != 0:
+                error_msg = f"Failed to install requirements: {pip_result.stderr}"
+                logger.error(error_msg)
+                response['logs'].append(error_msg)
+                return jsonify({
+                    'success': False,
+                    'error': error_msg,
+                    'logs': response['logs']
+                }), 500
+            else:
+                success_msg = "Successfully installed updated requirements"
+                logger.info(success_msg)
+                response['logs'].append(success_msg)
+        
+        if python_files_changed or requirements_changed:
+            # If Python files or requirements changed, we need to restart
             # Use os.execv to restart the current process
-            logger.info("Python files changed, restarting application...")
-            os.execv(sys.executable, ['python'] + sys.argv)
+            logger.info("Python files or requirements changed, restarting application...")
+            response['logs'].append("Restarting application with new code/dependencies...")
+            
+            # Return the response first, then restart
+            return jsonify(response)
+            # The actual restart will be handled by the client-side javascript
+            # which will poll the health endpoint until the server is back up
         elif template_files_changed:
             # Force refresh templates in memory
             logger.info("Template files changed, clearing template cache...")
+            response['logs'].append("Template files changed, clearing template cache...")
             app.jinja_env.cache = {}
         
         return jsonify(response)
         
     except Exception as e:
-        logger.error(f"Error pulling latest changes: {str(e)}")
+        error_msg = f"Error pulling latest changes: {str(e)}"
+        logger.error(error_msg)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'logs': [error_msg]
+        }), 500
+
+@app.route('/api/restart', methods=['POST'])
+def restart_app():
+    try:
+        cause = request.json.get('cause', 'unknown')
+        logger.info(f"Received request to restart the application. Cause: {cause}")
+        
+        # Use os.execv to restart the current process
+        os.execv(sys.executable, ['python'] + sys.argv)
+        
+        # This code will never be reached as the process will be restarted
+        return jsonify({
+            'success': True
+        })
+    except Exception as e:
+        error_msg = f"Error restarting application: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'logs': [error_msg]
         }), 500
 
 if __name__ == '__main__':

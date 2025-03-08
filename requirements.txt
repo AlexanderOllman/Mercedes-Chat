@@ -1,7 +1,7 @@
 flask
 kubernetes
 requests
-flask-socketio 
+flask-socketio
 eventlet
 huggingface_hub
 PyYAML
@@ -10,3 +10,6 @@ langchain
 faiss-cpu
 python-dotenv
 pillow
+weaviate-client
+tensorflow
+numpy
