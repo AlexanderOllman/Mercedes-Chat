@@ -78,37 +78,6 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None, verbose=False):
     weaviate_logger.debug(f"Attempting to connect to Weaviate at: {url}")
     weaviate_logger.debug(f"Using auth token: {'Yes' if token else 'No'}")
     
-    # Test DNS resolution for Weaviate host
-    try:
-        import socket
-        weaviate_ip = socket.gethostbyname(url)
-        weaviate_logger.debug(f"DNS resolution for {url}: {weaviate_ip}")
-    except Exception as dns_err:
-        weaviate_logger.warning(f"Could not resolve DNS for {url}: {str(dns_err)}")
-        weaviate_logger.warning(f"This may cause connection issues if the hostname is not resolvable")
-    
-    # Test basic network connectivity to the host
-    try:
-        import requests
-        from urllib.parse import urlparse
-        
-        # Set a short timeout for the connection test
-        timeout = 3
-        
-        # Build the URL for a basic connectivity test (using the health endpoint)
-        http_protocol = "https" if url.startswith("https") else "http"
-        health_url = f"{http_protocol}://{url}:80/v1/.well-known/ready"
-        
-        weaviate_logger.debug(f"Testing basic HTTP connectivity to {health_url} (timeout: {timeout}s)")
-        response = requests.get(health_url, timeout=timeout)
-        weaviate_logger.debug(f"HTTP connectivity test: Status code {response.status_code}")
-    except requests.exceptions.ConnectTimeout:
-        weaviate_logger.warning(f"Connection timed out after {timeout}s when connecting to {url}")
-    except requests.exceptions.ConnectionError as conn_err:
-        weaviate_logger.warning(f"Connection error when testing HTTP connectivity: {str(conn_err)}")
-    except Exception as net_err:
-        weaviate_logger.warning(f"Error testing HTTP connectivity: {str(net_err)}")
-    
     headers = {}
     if token:
         headers = {"x-auth-token": token}
@@ -117,7 +86,6 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None, verbose=False):
     try:
         weaviate_logger.debug(f"Connection parameters: HTTP Host={url}, HTTP Port=80, GRPC Host=weaviate-grpc.poc-weaviate.svc.cluster.local, GRPC Port=50051")
         
-        # Add timeout settings for better error messages
         client = weaviate.connect_to_custom(
             http_host=url,
             http_port=80,
@@ -126,44 +94,20 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None, verbose=False):
             grpc_port=50051,
             grpc_secure=False,
             headers=headers,
-            skip_init_checks=False,
-            connection_timeout=5  # 5 seconds timeout for better error messages
+            skip_init_checks=False
         )
         
         weaviate_logger.debug("Weaviate client created, checking if ready...")
         
-        # Check if the client's ready() method is available (may differ in client versions)
-        ready_result = client.is_ready()
-        weaviate_logger.debug(f"is_ready() call returned: {ready_result}")
-        
-        if ready_result:
+        if client.is_ready():
             weaviate_logger.info("Successfully connected to Weaviate")
             logger.info("Successfully connected to Weaviate")
             
             # Get and log cluster status information
             try:
-                # Check which API version we're using and call the appropriate method
-                if hasattr(client, 'get_meta'):
-                    meta = client.get_meta()
-                    weaviate_logger.debug(f"Weaviate version: {meta.get('version', 'unknown')}")
-                    weaviate_logger.debug(f"Weaviate status: {meta}")
-                else:
-                    # Try the newer API format if available
-                    weaviate_logger.debug("Using newer Weaviate client API for metadata")
-                    meta_info = {
-                        "client_version": getattr(weaviate, "__version__", "unknown"),
-                        "connection_type": "HTTP and GRPC"
-                    }
-                    weaviate_logger.debug(f"Client information: {meta_info}")
-                    
-                    # Try to get schema information to verify further connectivity
-                    try:
-                        if hasattr(client, 'collections'):
-                            collections = client.collections.get()
-                            weaviate_logger.debug(f"Available collections: {list(collections.keys()) if collections else []}")
-                    except Exception as schema_err:
-                        weaviate_logger.warning(f"Could not retrieve collections: {str(schema_err)}")
-                        
+                meta = client.get_meta()
+                weaviate_logger.debug(f"Weaviate version: {meta.get('version', 'unknown')}")
+                weaviate_logger.debug(f"Weaviate status: {meta}")
             except Exception as meta_e:
                 weaviate_logger.warning(f"Connected but couldn't retrieve metadata: {str(meta_e)}")
             
@@ -179,11 +123,6 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None, verbose=False):
     except weaviate.exceptions.WeaviateAuthenticationError as auth_err:
         weaviate_logger.error(f"Weaviate authentication error: {str(auth_err)}")
         logger.error(f"Weaviate authentication error: {str(auth_err)}")
-        return None
-    except AttributeError as attr_err:
-        weaviate_logger.error(f"Weaviate client API compatibility error: {str(attr_err)}")
-        weaviate_logger.error(f"This may be due to a version mismatch between your code and the Weaviate Python client")
-        logger.error(f"Weaviate client API compatibility error: {str(attr_err)}")
         return None
     except Exception as e:
         weaviate_logger.error(f"Unexpected error connecting to Weaviate: {str(e)}")
@@ -940,79 +879,46 @@ def test_weaviate_connection():
                 'logs': logs
             }), 400
         
-        # Get schema info to further verify connection
+        # Get collection info to further verify connection (v4 API)
         try:
-            # In newer Weaviate client versions (1.x), we need to use client.collections.get() instead of client.schema.get()
-            try:
-                # First try the new API (Weaviate client v4.x)
-                collections = weaviate_client.collections.get()
-                
-                # Log information about collections
-                num_collections = len(collections) if collections else 0
-                log_msg = f"Schema contains {num_collections} collections"
-                logger.info(log_msg)
-                logs.append(log_msg)
-                
-                # Check if our collection exists
-                collection_exists = False
-                for collection_name in collections:
-                    if collection_name == 'MercedesImageEmbedding':
-                        collection_exists = True
-                        log_msg = f"Found MercedesImageEmbedding collection"
-                        logger.info(log_msg)
-                        logs.append(log_msg)
-                        break
-                
-                if not collection_exists:
-                    log_msg = "MercedesImageEmbedding collection not found, will be created when needed"
-                    logger.info(log_msg)
-                    logs.append(log_msg)
+            # Get list of collections instead of schema (v4 API)
+            collections = weaviate_client.collections.list_all()
             
-            except AttributeError:
-                # Fallback to older API style if needed (for Weaviate client v3.x)
-                try:
-                    # Get schema directly with get_schema() method, which might exist in some versions
-                    schema = weaviate_client.get_schema()
-                    
-                    # Log information about schema
-                    if 'classes' in schema:
-                        num_classes = len(schema['classes'])
-                        log_msg = f"Schema contains {num_classes} classes"
-                        logger.info(log_msg)
-                        logs.append(log_msg)
-                        
-                        # Check if our collection exists
-                        collection_exists = False
-                        for cls in schema['classes']:
-                            if cls['class'] == 'MercedesImageEmbedding':
-                                collection_exists = True
-                                log_msg = f"Found MercedesImageEmbedding collection"
-                                logger.info(log_msg)
-                                logs.append(log_msg)
-                                break
-                        
-                        if not collection_exists:
-                            log_msg = "MercedesImageEmbedding collection not found, will be created when needed"
-                            logger.info(log_msg)
-                            logs.append(log_msg)
-                    else:
-                        log_msg = "Connected to Weaviate but schema appears to be empty"
-                        logger.info(log_msg)
-                        logs.append(log_msg)
-                
-                except AttributeError:
-                    # If neither method is available, log that we couldn't check the schema
-                    log_msg = "Connected to Weaviate but couldn't check schema (API incompatibility)"
-                    logger.warning(log_msg)
-                    logs.append(log_msg)
+            # Log information about collections
+            num_collections = len(collections)
+            log_msg = f"Weaviate contains {num_collections} collections"
+            logger.info(log_msg)
+            logs.append(log_msg)
             
+            # List collection names
+            collection_names = [collection.name for collection in collections]
+            if collection_names:
+                logs.append(f"Collection names: {', '.join(collection_names)}")
+            
+            # Check if our collection exists
+            collection_name = "MercedesImageEmbedding"
+            collection_exists = collection_name in collection_names
+            
+            if collection_exists:
+                logs.append(f"Collection '{collection_name}' exists")
+                
+                # Get a specific collection to check details
+                collection = weaviate_client.collections.get(collection_name)
+                
+                # Get object count in collection
+                count = collection.aggregate.over_all().with_meta_count().do()
+                object_count = count.meta_count
+                logs.append(f"Collection '{collection_name}' contains {object_count} objects")
+            else:
+                logs.append(f"Collection '{collection_name}' does not exist yet. It will be created when needed.")
+            
+            # Return success
             return jsonify({
                 'success': True,
-                'message': 'Successfully connected to Weaviate',
                 'logs': logs
             })
         except Exception as e:
-            error_msg = f"Error retrieving Weaviate schema: {str(e)}"
+            error_msg = f"Error retrieving Weaviate collections: {str(e)}"
             logger.error(error_msg)
             logs.append(error_msg)
             return jsonify({
