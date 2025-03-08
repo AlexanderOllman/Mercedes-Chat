@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mercedes Image Chatbot</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
         }
         
         .container {
@@ -326,91 +326,120 @@
         }
     </style>
 </head>
-<body>
-    <h1>Mercedes Image Chatbot - Hi Nishant!</h1>
-    
-    <div class="container">
-        <div class="main-content">
-            <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
-            <button id="searchButton" class="search-button">Search</button>
-            
-            <div class="loading" id="loadingIndicator">
-                <div class="spinner"></div>
-                <p>Searching for images...</p>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 text-white">
+            <div class="p-4">
+                <h1 class="text-xl font-bold">Mercedes Chat</h1>
             </div>
-            
-            <div class="results-area">
-                <h2>Results</h2>
-                <div id="resultsCarousel" class="carousel">
-                    <!-- Results will be dynamically inserted here -->
-                </div>
-            </div>
-            
-            <div class="log-container">
-                <h2>Operation Logs</h2>
-                <div class="log-controls">
-                    <button id="clearLogButton" class="clear-log-button">Clear Logs</button>
-                </div>
-                <pre id="logOutput" class="log-output"></pre>
-            </div>
+            <nav class="mt-6">
+                <a href="/" class="flex items-center px-4 py-3 hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/settings" class="flex items-center px-4 py-3 hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
         </div>
-        
-        <div class="settings-panel">
-            <h3 class="settings-title">Settings</h3>
-            
-            <button id="refreshButton" class="btn-refresh">Refresh</button>
-            
-            <div id="status" class="status" style="display: none;"></div>
-            
-            <h4>S3 Configuration</h4>
-            <div>
-                <label for="s3Endpoint">S3 Endpoint URL:</label>
-                <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <div class="container p-6">
+                <h1>Mercedes Image Chatbot - Hi there!</h1>
+                
+                <div class="container">
+                    <div class="main-content">
+                        <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
+                        <button id="searchButton" class="search-button">Search</button>
+                        
+                        <div class="loading" id="loadingIndicator">
+                            <div class="spinner"></div>
+                            <p>Searching for images...</p>
+                        </div>
+                        
+                        <div class="results-area">
+                            <h2>Results</h2>
+                            <div id="resultsCarousel" class="carousel">
+                                <!-- Results will be dynamically inserted here -->
+                            </div>
+                        </div>
+                        
+                        <div class="log-container">
+                            <h2>Operation Logs</h2>
+                            <div class="log-controls">
+                                <button id="clearLogButton" class="clear-log-button">Clear Logs</button>
+                            </div>
+                            <pre id="logOutput" class="log-output"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-panel">
+                        <h3 class="settings-title">Settings</h3>
+                        
+                        <button id="refreshButton" class="btn-refresh">Refresh</button>
+                        
+                        <div id="status" class="status" style="display: none;"></div>
+                        
+                        <h4>S3 Configuration</h4>
+                        <div>
+                            <label for="s3Endpoint">S3 Endpoint URL:</label>
+                            <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+                        </div>
+                        
+                        <div>
+                            <label for="s3AccessKey">Access Key ID:</label>
+                            <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
+                        </div>
+                        
+                        <div>
+                            <label for="s3SecretKey">Secret Access Key:</label>
+                            <input type="password" id="s3SecretKey" placeholder="Enter secret key">
+                        </div>
+                        
+                        <div>
+                            <label for="s3BucketName">Bucket Name:</label>
+                            <input type="text" id="s3BucketName" placeholder="my-bucket">
+                        </div>
+                        
+                        <div class="test-connection-container">
+                            <button id="testS3Button" class="test-connection-button">Test S3 Connection</button>
+                        </div>
+                        <div id="s3ConnectionStatus" class="test-connection-status"></div>
+                        
+                        <h4>Weaviate Configuration</h4>
+                        <div>
+                            <label for="weaviateUrl">Weaviate URL:</label>
+                            <input type="text" id="weaviateUrl" placeholder="weaviate.poc-weaviate.svc.cluster.local">
+                        </div>
+                        
+                        <div>
+                            <label for="weaviateToken">Weaviate Token:</label>
+                            <input type="password" id="weaviateToken" placeholder="Enter auth token">
+                        </div>
+                        
+                        <div class="test-connection-container">
+                            <button id="testWeaviateButton" class="test-connection-button">Test Weaviate Connection</button>
+                        </div>
+                        <div id="weaviateConnectionStatus" class="test-connection-status"></div>
+                        
+                        <button id="saveSettingsButton" class="save-settings">Save Settings</button>
+                        
+                        <h4>Embedding</h4>
+                        <p>Process and embed text descriptions into Weaviate (no image processing)</p>
+                        <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
+                        <button id="embedButton" class="embed-button">Embed Text Data</button>
+                        <div id="embedStatus" class="status" style="display: none;"></div>
+                    </div>
+                </div>
             </div>
-            
-            <div>
-                <label for="s3AccessKey">Access Key ID:</label>
-                <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
-            </div>
-            
-            <div>
-                <label for="s3SecretKey">Secret Access Key:</label>
-                <input type="password" id="s3SecretKey" placeholder="Enter secret key">
-            </div>
-            
-            <div>
-                <label for="s3BucketName">Bucket Name:</label>
-                <input type="text" id="s3BucketName" placeholder="my-bucket">
-            </div>
-            
-            <div class="test-connection-container">
-                <button id="testS3Button" class="test-connection-button">Test S3 Connection</button>
-            </div>
-            <div id="s3ConnectionStatus" class="test-connection-status"></div>
-            
-            <h4>Weaviate Configuration</h4>
-            <div>
-                <label for="weaviateUrl">Weaviate URL:</label>
-                <input type="text" id="weaviateUrl" placeholder="weaviate.poc-weaviate.svc.cluster.local">
-            </div>
-            
-            <div>
-                <label for="weaviateToken">Weaviate Token:</label>
-                <input type="password" id="weaviateToken" placeholder="Enter auth token">
-            </div>
-            
-            <div class="test-connection-container">
-                <button id="testWeaviateButton" class="test-connection-button">Test Weaviate Connection</button>
-            </div>
-            <div id="weaviateConnectionStatus" class="test-connection-status"></div>
-            
-            <button id="saveSettingsButton" class="save-settings">Save Settings</button>
-            
-            <h4>Embedding</h4>
-            <p>Process and embed text descriptions into Weaviate (no image processing)</p>
-            <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
-            <button id="embedButton" class="embed-button">Embed Text Data</button>
-            <div id="embedStatus" class="status" style="display: none;"></div>
         </div>
     </div>
     

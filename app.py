@@ -200,13 +200,15 @@ def store_text_embedding_in_weaviate(collection, s3_key, text):
 
 @app.route('/')
 def index():
-    response = render_template('index.html')
-    # Add cache control headers to prevent browser caching
-    return response, {'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'}
+    return render_template('index.html')
+
+@app.route('/settings')
+def settings():
+    return render_template('settings.html')
 
 @app.route('/health')
 def health_check():
-    return jsonify({'status': 'ok'})
+    return jsonify({"status": "ok"})
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -826,6 +828,165 @@ def test_weaviate_connection():
             'error': error_msg,
             'logs': [error_msg]
         }), 500
+
+@app.route('/api/check-file', methods=['POST'])
+def check_file():
+    try:
+        # Get configuration from request
+        data = request.json
+        s3_endpoint = data.get('s3_endpoint')
+        aws_access_key_id = data.get('aws_access_key_id')
+        aws_secret_access_key = data.get('aws_secret_access_key')
+        bucket_name = data.get('s3_bucket_name')
+        file_path = data.get('file_path', 'training/training.json')
+        
+        # Create S3 client
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
+        
+        # Check if file exists
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=file_path)
+            content = response['Body'].read().decode('utf-8')
+            json_data = json.loads(content)
+            
+            return jsonify({
+                'success': True,
+                'message': f'File found with {len(json_data)} entries',
+                'entry_count': len(json_data)
+            })
+        except Exception as e:
+            logger.error(f"Error checking file: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 400
+    except Exception as e:
+        logger.error(f"Error in check_file: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Global variables to track embedding progress
+embedding_status = {
+    'status': 'idle',  # 'idle', 'in_progress', 'completed', 'error'
+    'total': 0,
+    'completed': 0,
+    'error': None
+}
+
+@app.route('/api/start-embedding', methods=['POST'])
+def start_embedding():
+    try:
+        global embedding_status
+        
+        # Get configuration from request
+        data = request.json
+        s3_endpoint = data.get('s3_endpoint')
+        aws_access_key_id = data.get('aws_access_key_id')
+        aws_secret_access_key = data.get('aws_secret_access_key')
+        bucket_name = data.get('s3_bucket_name')
+        file_path = data.get('file_path', 'training/training.json')
+        weaviate_url = data.get('weaviate_url')
+        weaviate_token = data.get('weaviate_token')
+        
+        # Create S3 client
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
+        
+        # Connect to Weaviate
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Weaviate'
+            }), 400
+        
+        # Get the collection
+        collection = initialize_weaviate_collection(weaviate_client)
+        if not collection:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize Weaviate collection'
+            }), 400
+        
+        # Get the JSON file
+        try:
+            response = s3_client.get_object(Bucket=bucket_name, Key=file_path)
+            content = response['Body'].read().decode('utf-8')
+            json_data = json.loads(content)
+            
+            # Update status
+            embedding_status = {
+                'status': 'in_progress',
+                'total': len(json_data),
+                'completed': 0,
+                'error': None
+            }
+            
+            # Start embedding in a background thread
+            import threading
+            embedding_thread = threading.Thread(
+                target=perform_embedding,
+                args=(collection, json_data)
+            )
+            embedding_thread.daemon = True
+            embedding_thread.start()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Started embedding {len(json_data)} entries'
+            })
+        except Exception as e:
+            logger.error(f"Error getting JSON file: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 400
+    except Exception as e:
+        logger.error(f"Error in start_embedding: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def perform_embedding(collection, json_data):
+    """Process embedding in a background thread"""
+    global embedding_status
+    
+    try:
+        for i, item in enumerate(json_data):
+            try:
+                # Extract data from the JSON item
+                s3_key = item.get('s3_key', '')
+                text = item.get('text', '')
+                
+                # Store the text embedding
+                success = store_text_embedding_in_weaviate(collection, s3_key, text)
+                
+                # Update progress only if successful
+                if success:
+                    embedding_status['completed'] += 1
+                    logger.info(f"Embedded {embedding_status['completed']} of {embedding_status['total']}")
+                
+                # Small delay to prevent overwhelming the system
+                time.sleep(0.1)
+            except Exception as e:
+                logger.error(f"Error embedding item {i}: {str(e)}")
+                # Continue with the next item
+        
+        # Update status to completed
+        embedding_status['status'] = 'completed'
+        logger.info("Embedding process completed")
+    except Exception as e:
+        logger.error(f"Error in embedding process: {str(e)}")
+        embedding_status['status'] = 'error'
+        embedding_status['error'] = str(e)
+
+@app.route('/api/embedding-progress', methods=['GET'])
+def embedding_progress():
+    """Return the current embedding progress"""
+    global embedding_status
+    return jsonify(embedding_status)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)

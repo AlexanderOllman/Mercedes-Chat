@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Mercedes Image Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 text-white">
+            <div class="p-4">
+                <h1 class="text-xl font-bold">Mercedes Chat</h1>
+            </div>
+            <nav class="mt-6">
+                <a href="/" class="flex items-center px-4 py-3 hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/settings" class="flex items-center px-4 py-3 bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <div class="container p-6 mx-auto">
+                <h1 class="text-2xl font-bold mb-6">Settings</h1>
+
+                <!-- Tab Navigation -->
+                <div class="mb-6 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px" id="settingsTabs" role="tablist">
+                        <li class="mr-2" role="presentation">
+                            <button class="inline-block py-2 px-4 font-medium text-center border-b-2 border-blue-500 text-blue-500 active" 
+                                    id="s3-tab" 
+                                    data-tab-target="s3-tab-content" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="s3" 
+                                    aria-selected="true">
+                                S3 Configuration
+                            </button>
+                        </li>
+                        <li class="mr-2" role="presentation">
+                            <button class="inline-block py-2 px-4 font-medium text-center text-gray-500 hover:text-blue-500 hover:border-blue-500 border-b-2 border-transparent" 
+                                    id="weaviate-tab" 
+                                    data-tab-target="weaviate-tab-content" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="weaviate" 
+                                    aria-selected="false">
+                                Weaviate Connection
+                            </button>
+                        </li>
+                        <li role="presentation">
+                            <button class="inline-block py-2 px-4 font-medium text-center text-gray-500 hover:text-blue-500 hover:border-blue-500 border-b-2 border-transparent" 
+                                    id="embed-tab" 
+                                    data-tab-target="embed-tab-content" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="embed" 
+                                    aria-selected="false">
+                                Embed Keys
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- S3 Tab Content -->
+                    <div class="tab-pane active" id="s3-tab-content" role="tabpanel" aria-labelledby="s3-tab">
+                        <div class="bg-white shadow-md rounded-lg p-6">
+                            <h2 class="text-xl font-semibold mb-4">S3 Configuration</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="s3_endpoint" class="block text-sm font-medium text-gray-700 mb-1">S3 Endpoint URL</label>
+                                    <input type="text" id="s3_endpoint" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="http://source-images-service.ezdata-system.svc.cluster.local:30000" 
+                                           value="http://source-images-service.ezdata-system.svc.cluster.local:30000">
+                                </div>
+                                <div>
+                                    <label for="aws_access_key_id" class="block text-sm font-medium text-gray-700 mb-1">AWS Access Key ID</label>
+                                    <input type="text" id="aws_access_key_id" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="Your AWS Access Key ID">
+                                </div>
+                                <div>
+                                    <label for="aws_secret_access_key" class="block text-sm font-medium text-gray-700 mb-1">AWS Secret Access Key</label>
+                                    <input type="password" id="aws_secret_access_key" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="Your AWS Secret Access Key">
+                                </div>
+                                <div>
+                                    <label for="s3_bucket_name" class="block text-sm font-medium text-gray-700 mb-1">S3 Bucket Name</label>
+                                    <input type="text" id="s3_bucket_name" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="poc-mercedes-gp" 
+                                           value="poc-mercedes-gp">
+                                </div>
+                                <div>
+                                    <button id="test-s3-connection" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                                        Test S3 Connection
+                                    </button>
+                                    <div id="s3-connection-status" class="mt-2 px-3 py-2 rounded-md hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weaviate Tab Content -->
+                    <div class="tab-pane hidden" id="weaviate-tab-content" role="tabpanel" aria-labelledby="weaviate-tab">
+                        <div class="bg-white shadow-md rounded-lg p-6">
+                            <h2 class="text-xl font-semibold mb-4">Weaviate Connection</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="weaviate_url" class="block text-sm font-medium text-gray-700 mb-1">Weaviate URL</label>
+                                    <input type="text" id="weaviate_url" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="weaviate.poc-weaviate.svc.cluster.local" 
+                                           value="weaviate.poc-weaviate.svc.cluster.local">
+                                </div>
+                                <div>
+                                    <label for="weaviate_token" class="block text-sm font-medium text-gray-700 mb-1">Weaviate Auth Token</label>
+                                    <input type="password" id="weaviate_token" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="Your Weaviate Auth Token">
+                                </div>
+                                <div>
+                                    <button id="test-weaviate-connection" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                                        Test Weaviate Connection
+                                    </button>
+                                    <div id="weaviate-connection-status" class="mt-2 px-3 py-2 rounded-md hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Embed Keys Tab Content -->
+                    <div class="tab-pane hidden" id="embed-tab-content" role="tabpanel" aria-labelledby="embed-tab">
+                        <div class="bg-white shadow-md rounded-lg p-6">
+                            <h2 class="text-xl font-semibold mb-4">Embed Keys from S3</h2>
+                            
+                            <div id="file-status" class="mb-4 p-4 bg-gray-100 rounded-md hidden">
+                                <p class="font-medium">Status: <span id="file-status-text">Checking...</span></p>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="json_file_path" class="block text-sm font-medium text-gray-700 mb-1">JSON File Path in S3</label>
+                                    <input type="text" id="json_file_path" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                           placeholder="training/training.json" 
+                                           value="training/training.json">
+                                </div>
+                                <div>
+                                    <button id="check-file" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+                                        Check File Availability
+                                    </button>
+                                </div>
+                                <div class="pt-4 border-t border-gray-200">
+                                    <h3 class="text-lg font-medium mb-2">Embedding Process</h3>
+                                    <p class="text-gray-600 mb-4">Start the process of embedding all entries from the JSON file into Weaviate.</p>
+                                    <button id="start-embedding" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50" disabled>
+                                        Start Embedding
+                                    </button>
+                                    <div id="embedding-progress" class="mt-4 hidden">
+                                        <div class="flex items-center">
+                                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                                <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                                            </div>
+                                            <span id="progress-text" class="ml-2 text-sm text-gray-600">0%</span>
+                                        </div>
+                                        <p id="embedding-status" class="mt-2 text-sm text-gray-600"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('[data-tab-target]');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => {
+                        t.classList.remove('border-blue-500', 'text-blue-500');
+                        t.classList.add('text-gray-500', 'border-transparent');
+                        t.setAttribute('aria-selected', 'false');
+                    });
+                    
+                    // Add active class to current tab
+                    tab.classList.remove('text-gray-500', 'border-transparent');
+                    tab.classList.add('border-blue-500', 'text-blue-500');
+                    tab.setAttribute('aria-selected', 'true');
+                    
+                    // Hide all tab content
+                    const tabContents = document.querySelectorAll('.tab-pane');
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                        content.classList.remove('active');
+                    });
+                    
+                    // Show current tab content
+                    const targetContent = document.getElementById(tab.getAttribute('data-tab-target'));
+                    targetContent.classList.remove('hidden');
+                    targetContent.classList.add('active');
+                });
+            });
+
+            // Test S3 Connection
+            document.getElementById('test-s3-connection').addEventListener('click', function() {
+                const statusElement = document.getElementById('s3-connection-status');
+                statusElement.textContent = 'Testing connection...';
+                statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-blue-100 text-blue-800';
+                statusElement.classList.remove('hidden');
+                
+                const s3Config = {
+                    s3_endpoint: document.getElementById('s3_endpoint').value,
+                    aws_access_key_id: document.getElementById('aws_access_key_id').value,
+                    aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
+                    s3_bucket_name: document.getElementById('s3_bucket_name').value
+                };
+                
+                // Test S3 connection
+                fetch('/api/test-s3-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(s3Config)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusElement.textContent = 'Connection successful!';
+                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-green-100 text-green-800';
+                    } else {
+                        statusElement.textContent = `Connection failed: ${data.error}`;
+                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
+                    }
+                })
+                .catch(error => {
+                    statusElement.textContent = `Error: ${error.message}`;
+                    statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
+                });
+            });
+
+            // Test Weaviate Connection
+            document.getElementById('test-weaviate-connection').addEventListener('click', function() {
+                const statusElement = document.getElementById('weaviate-connection-status');
+                statusElement.textContent = 'Testing connection...';
+                statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-blue-100 text-blue-800';
+                statusElement.classList.remove('hidden');
+                
+                const weaviateConfig = {
+                    weaviate_url: document.getElementById('weaviate_url').value,
+                    weaviate_token: document.getElementById('weaviate_token').value
+                };
+                
+                // Test Weaviate connection
+                fetch('/api/test-weaviate-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(weaviateConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusElement.textContent = 'Connection successful!';
+                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-green-100 text-green-800';
+                    } else {
+                        statusElement.textContent = `Connection failed: ${data.error}`;
+                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
+                    }
+                })
+                .catch(error => {
+                    statusElement.textContent = `Error: ${error.message}`;
+                    statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
+                });
+            });
+
+            // Check File Availability
+            document.getElementById('check-file').addEventListener('click', function() {
+                const fileStatusContainer = document.getElementById('file-status');
+                const fileStatusText = document.getElementById('file-status-text');
+                const startEmbeddingButton = document.getElementById('start-embedding');
+                
+                fileStatusContainer.classList.remove('hidden');
+                fileStatusText.textContent = 'Checking file availability...';
+                fileStatusContainer.className = 'mb-4 p-4 bg-blue-100 rounded-md';
+                
+                const s3Config = {
+                    s3_endpoint: document.getElementById('s3_endpoint').value,
+                    aws_access_key_id: document.getElementById('aws_access_key_id').value,
+                    aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
+                    s3_bucket_name: document.getElementById('s3_bucket_name').value,
+                    file_path: document.getElementById('json_file_path').value
+                };
+                
+                // Check file availability
+                fetch('/api/check-file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(s3Config)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fileStatusText.textContent = `File found! Contains ${data.entry_count || 'unknown number of'} entries.`;
+                        fileStatusContainer.className = 'mb-4 p-4 bg-green-100 rounded-md';
+                        startEmbeddingButton.disabled = false;
+                    } else {
+                        fileStatusText.textContent = `File not found: ${data.error}`;
+                        fileStatusContainer.className = 'mb-4 p-4 bg-red-100 rounded-md';
+                        startEmbeddingButton.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    fileStatusText.textContent = `Error: ${error.message}`;
+                    fileStatusContainer.className = 'mb-4 p-4 bg-red-100 rounded-md';
+                    startEmbeddingButton.disabled = true;
+                });
+            });
+
+            // Start Embedding
+            document.getElementById('start-embedding').addEventListener('click', function() {
+                const embeddingProgress = document.getElementById('embedding-progress');
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                const embeddingStatus = document.getElementById('embedding-status');
+                
+                embeddingProgress.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                embeddingStatus.textContent = 'Starting embedding process...';
+                
+                const config = {
+                    s3_endpoint: document.getElementById('s3_endpoint').value,
+                    aws_access_key_id: document.getElementById('aws_access_key_id').value,
+                    aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
+                    s3_bucket_name: document.getElementById('s3_bucket_name').value,
+                    weaviate_url: document.getElementById('weaviate_url').value,
+                    weaviate_token: document.getElementById('weaviate_token').value,
+                    file_path: document.getElementById('json_file_path').value
+                };
+                
+                // Start embedding process
+                fetch('/api/start-embedding', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        checkEmbeddingProgress();
+                    } else {
+                        embeddingStatus.textContent = `Error starting embedding: ${data.error}`;
+                    }
+                })
+                .catch(error => {
+                    embeddingStatus.textContent = `Error: ${error.message}`;
+                });
+            });
+
+            // Function to check embedding progress
+            function checkEmbeddingProgress() {
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                const embeddingStatus = document.getElementById('embedding-status');
+                
+                fetch('/api/embedding-progress')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'in_progress') {
+                        const percent = Math.round((data.completed / data.total) * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressText.textContent = `${percent}%`;
+                        embeddingStatus.textContent = `Embedded ${data.completed} of ${data.total} entries...`;
+                        
+                        // Check again in 1 second
+                        setTimeout(checkEmbeddingProgress, 1000);
+                    } else if (data.status === 'completed') {
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        embeddingStatus.textContent = `Embedding complete! ${data.total} entries processed.`;
+                    } else {
+                        embeddingStatus.textContent = `Error: ${data.error}`;
+                    }
+                })
+                .catch(error => {
+                    embeddingStatus.textContent = `Error checking progress: ${error.message}`;
+                });
+            }
+        });
+    </script>
+</body>
+</html> 
