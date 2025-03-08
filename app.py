@@ -593,8 +593,22 @@ def pull_latest():
                 'logs': [error_msg]
             })
 
-        # Stash any local changes
-        subprocess.run(['git', 'stash'], cwd=app_dir)
+        logs = []
+        
+        # Make sure git status is clean first - check for any local changes
+        status_result = subprocess.run(
+            ['git', 'status', '--porcelain'],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        )
+        
+        if status_result.stdout.strip():
+            # There are uncommitted changes, stash them
+            log_msg = "Stashing local changes before pull"
+            logger.info(log_msg)
+            logs.append(log_msg)
+            subprocess.run(['git', 'stash'], cwd=app_dir)
         
         # Get the current commit hash before pull
         before_pull_hash = subprocess.run(
@@ -603,6 +617,45 @@ def pull_latest():
             capture_output=True,
             text=True
         ).stdout.strip()
+        
+        # Get the remote hash to compare with local before pulling
+        fetch_result = subprocess.run(
+            ['git', 'fetch', '--quiet', 'origin', 'main'],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        )
+        
+        if fetch_result.returncode != 0:
+            error_msg = f'Git fetch failed: {fetch_result.stderr}'
+            logger.error(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': [error_msg]
+            })
+        
+        # Check if there are any changes to pull
+        remote_hash = subprocess.run(
+            ['git', 'rev-parse', 'origin/main'],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        ).stdout.strip()
+        
+        # If local is same as remote, no need to pull
+        if before_pull_hash == remote_hash:
+            log_message = "Already up to date. No changes to pull."
+            logger.info(log_message)
+            return jsonify({
+                'success': True,
+                'message': log_message,
+                'needsRestart': False,
+                'changedFiles': [],
+                'templatesChanged': False,
+                'requirementsChanged': False,
+                'logs': [log_message]
+            })
         
         # Run git pull
         result = subprocess.run(
@@ -629,32 +682,47 @@ def pull_latest():
             text=True
         ).stdout.strip()
         
-        changed_files = []
+        # Verify that the pull actually changed something
+        if before_pull_hash == after_pull_hash:
+            log_message = "Pull completed but no changes were made"
+            logger.info(log_message)
+            return jsonify({
+                'success': True,
+                'message': log_message,
+                'needsRestart': False,
+                'changedFiles': [],
+                'templatesChanged': False,
+                'requirementsChanged': False,
+                'logs': [log_message]
+            })
         
-        # Only check for changes if the commit hash changed (meaning new changes were pulled)
-        if before_pull_hash != after_pull_hash:
-            # Check what files changed between the two commits
-            changed_files = subprocess.run(
-                ['git', 'diff', '--name-only', before_pull_hash, after_pull_hash],
-                cwd=app_dir,
-                capture_output=True,
-                text=True
-            ).stdout.splitlines()
+        # Check what files changed between the two commits
+        changed_files = subprocess.run(
+            ['git', 'diff', '--name-only', before_pull_hash, after_pull_hash],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        ).stdout.splitlines()
         
         python_files_changed = any(f.endswith('.py') for f in changed_files)
         template_files_changed = any('templates/' in f for f in changed_files)
+        static_files_changed = any('static/' in f for f in changed_files)
         requirements_changed = 'requirements.txt' in changed_files
         
         # Log the changes
         log_message = f"Changed files: {', '.join(changed_files)}" if changed_files else "No files changed"
         logger.info(log_message)
+        logs.append(log_message)
         
-        logs = [log_message]
+        # Determine if we need a full restart or just a page refresh
+        needs_restart = python_files_changed or requirements_changed
+        needs_page_refresh = template_files_changed or static_files_changed
         
         response = {
             'success': True,
             'message': result.stdout,
-            'needsRestart': python_files_changed or requirements_changed,
+            'needsRestart': needs_restart,
+            'needsPageRefresh': needs_page_refresh,
             'changedFiles': changed_files,
             'templatesChanged': template_files_changed,
             'requirementsChanged': requirements_changed,
@@ -704,7 +772,7 @@ def pull_latest():
         # Update the logs in the response
         response['logs'] = logs
         
-        if python_files_changed or requirements_changed:
+        if needs_restart:
             # If Python files or requirements changed, we need to restart
             logger.info("Python files or requirements changed, restarting application...")
             logs.append("Restarting application with new code/dependencies...")
@@ -712,13 +780,20 @@ def pull_latest():
             
             # Return the response but don't restart yet - the client will call /api/restart
             return jsonify(response)
-        elif template_files_changed:
+        elif needs_page_refresh:
             # Force refresh templates in memory
-            logger.info("Template files changed, clearing template cache...")
-            logs.append("Template files changed, clearing template cache...")
+            logger.info("Template or static files changed, clearing template cache...")
+            logs.append("Template or static files changed, clearing template cache...")
             app.jinja_env.cache = {}
-        
-        return jsonify(response)
+            response['logs'] = logs
+            
+            # Return with indication that only page refresh is needed, not full restart
+            return jsonify(response)
+        else:
+            # No restart or refresh needed
+            logs.append("Changes detected, but no restart or refresh needed")
+            response['logs'] = logs
+            return jsonify(response)
         
     except Exception as e:
         error_msg = f"Error pulling latest changes: {str(e)}"
