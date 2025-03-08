@@ -5,220 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mercedes Image Chatbot</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <!-- Add Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
-        
-        .main-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        /* Sidebar Styles */
-        .sidebar {
-            width: 240px;
-            background-color: #00548c;
-            color: white;
-            transition: all 0.3s;
-        }
-        
-        .sidebar-header {
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .sidebar-menu {
-            padding: 20px 0;
-        }
-        
-        .sidebar-menu-item {
-            padding: 10px 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-        }
-        
-        .sidebar-menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .sidebar-menu-item.active {
-            background-color: rgba(255, 255, 255, 0.2);
-            border-left: 4px solid white;
-        }
-        
-        .sidebar-menu-icon {
-            margin-right: 10px;
-        }
-        
-        /* Content Styles */
-        .content-container {
-            flex: 1;
-            padding: 20px;
-            background-color: #f9f9f9;
-            overflow-y: auto;
-        }
-        
-        .settings-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-bottom: 20px;
-            display: none; /* Hidden by default */
-        }
-        
-        .settings-header {
-            background-color: #00548c;
-            color: white;
-            padding: 15px 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .settings-tabs {
-            display: flex;
-            background-color: #f1f1f1;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .settings-tab {
-            padding: 12px 20px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .settings-tab.active {
-            background-color: white;
-            border-bottom: 3px solid #00548c;
-            color: #00548c;
-        }
-        
-        .settings-content {
-            padding: 20px;
-        }
-        
-        .settings-form-group {
-            margin-bottom: 15px;
-        }
-        
-        .settings-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .settings-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .settings-button {
-            background-color: #00548c;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .settings-button:hover {
-            background-color: #003d69;
-        }
-        
-        .settings-tab-content {
-            display: none; /* Hidden by default */
-        }
-        
-        .settings-tab-content.active {
-            display: block;
-        }
-        
-        /* Status message styles */
-        .status-message {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .status-message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status-message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status-message.info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        
-        /* Chat Container */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        .chat-header {
-            background-color: #00548c;
-            color: white;
-            padding: 15px 20px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .chat-input-container {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .chat-input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .chat-send-button {
-            background-color: #00548c;
-            color: white;
-            padding: 0 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
         }
         
         .container {
@@ -235,6 +27,15 @@
             padding: 20px;
             background-color: #f5f5f5;
             border-radius: 8px;
+        }
+        
+        .chat-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
         }
         
         .search-button {
@@ -526,315 +327,609 @@
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <img src="/static/img/mercedes_logo_white.svg" alt="Mercedes Logo" style="max-width: 80px;">
+    <h1>Mercedes Image Chatbot - Hi Nishant!</h1>
+    
+    <div class="container">
+        <div class="main-content">
+            <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
+            <button id="searchButton" class="search-button">Search</button>
+            
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Searching for images...</p>
             </div>
-            <div class="sidebar-menu">
-                <div id="chat-menu-item" class="sidebar-menu-item active" onclick="showContent('chat')">
-                    <span class="sidebar-menu-icon">💬</span>
-                    <span>Chat</span>
-                </div>
-                <div id="settings-menu-item" class="sidebar-menu-item" onclick="showContent('settings')">
-                    <span class="sidebar-menu-icon">⚙️</span>
-                    <span>Settings</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Content Container -->
-        <div class="content-container">
-            <!-- Settings Container -->
-            <div id="settings-container" class="settings-container">
-                <div class="settings-header">
-                    <span>Settings</span>
-                </div>
-                <div class="settings-tabs">
-                    <div id="s3-tab" class="settings-tab active" onclick="showSettingsTab('s3')">S3 Bucket</div>
-                    <div id="weaviate-tab" class="settings-tab" onclick="showSettingsTab('weaviate')">Weaviate</div>
-                    <div id="embed-tab" class="settings-tab" onclick="showSettingsTab('embed')">Embed Keys</div>
-                </div>
-                
-                <!-- S3 Tab Content -->
-                <div id="s3-content" class="settings-tab-content active">
-                    <div class="settings-content">
-                        <div class="settings-form-group">
-                            <label class="settings-label">S3 Endpoint URL</label>
-                            <input type="text" id="s3_endpoint" class="settings-input" 
-                                   placeholder="http://source-images-service.ezdata-system.svc.cluster.local:30000">
-                        </div>
-                        <div class="settings-form-group">
-                            <label class="settings-label">AWS Access Key ID</label>
-                            <input type="text" id="aws_access_key_id" class="settings-input" placeholder="Access Key ID">
-                        </div>
-                        <div class="settings-form-group">
-                            <label class="settings-label">AWS Secret Access Key</label>
-                            <input type="password" id="aws_secret_access_key" class="settings-input" placeholder="Secret Access Key">
-                        </div>
-                        <div class="settings-form-group">
-                            <label class="settings-label">S3 Bucket Name</label>
-                            <input type="text" id="s3_bucket_name" class="settings-input" placeholder="poc-mercedes-gp">
-                        </div>
-                        
-                        <div class="test-connection-container">
-                            <button id="testS3Button" class="test-connection-button">Test S3 Connection</button>
-                            <div id="s3ConnectionStatus" class="test-connection-status"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Weaviate Tab Content -->
-                <div id="weaviate-content" class="settings-tab-content">
-                    <div class="settings-content">
-                        <div class="settings-form-group">
-                            <label class="settings-label">Weaviate URL</label>
-                            <input type="text" id="weaviate_url" class="settings-input" 
-                                   placeholder="weaviate.poc-weaviate.svc.cluster.local">
-                        </div>
-                        <div class="settings-form-group">
-                            <label class="settings-label">Weaviate Authentication Token</label>
-                            <input type="password" id="weaviate_token" class="settings-input" placeholder="Weaviate Token">
-                        </div>
-                        
-                        <div class="test-connection-container">
-                            <button id="testWeaviateButton" class="test-connection-button">Test Weaviate Connection</button>
-                            <div id="weaviateConnectionStatus" class="test-connection-status"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Embed Keys Tab Content -->
-                <div id="embed-content" class="settings-tab-content">
-                    <div class="settings-content">
-                        <div class="settings-form-group">
-                            <h3 class="text-lg font-semibold mb-2">Training File: training.json</h3>
-                            <p class="mb-4">First, retrieve the training.json file from S3, then embed the entries in Weaviate.</p>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <button id="retrieveTrainingButton" class="settings-button bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
-                                Retrieve Training File
-                            </button>
-                            <div id="retrieveStatus" class="status-message mt-2" style="display: none;"></div>
-                        </div>
-                        
-                        <div class="training-info mb-4" style="display: none;">
-                            <div class="bg-gray-100 p-3 rounded">
-                                <p>Training file retrieved successfully.</p>
-                                <p id="entriesCount" class="font-semibold"></p>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4" id="embedButtonContainer" style="display: none;">
-                            <button id="embedButton" class="settings-button bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">
-                                Start Embedding Entries
-                            </button>
-                            <div id="embedStatus" class="status-message mt-2" style="display: none;"></div>
-                        </div>
-                        
-                        <div class="log-container">
-                            <div id="embedLogs"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-content" style="border-top: 1px solid #eee; margin-top: 10px;">
-                    <button id="saveSettingsButton" class="settings-button">Save Settings</button>
-                    <div id="settingsStatus" class="status-message" style="display: none;"></div>
+            
+            <div class="results-area">
+                <h2>Results</h2>
+                <div id="resultsCarousel" class="carousel">
+                    <!-- Results will be dynamically inserted here -->
                 </div>
             </div>
             
-            <!-- Chat Container -->
-            <div id="chat-container" class="chat-container">
-                <div class="chat-header">
-                    <span>Mercedes Image Chatbot</span>
+            <div class="log-container">
+                <h2>Operation Logs</h2>
+                <div class="log-controls">
+                    <button id="clearLogButton" class="clear-log-button">Clear Logs</button>
                 </div>
-                <div id="chatMessages" class="chat-messages">
-                    <!-- Chat messages will be added here -->
-                </div>
-                <div class="chat-input-container">
-                    <input type="text" id="chatInput" class="chat-input" placeholder="Type your message here...">
-                    <button id="sendButton" class="chat-send-button">Send</button>
-                </div>
+                <pre id="logOutput" class="log-output"></pre>
             </div>
+        </div>
+        
+        <div class="settings-panel">
+            <h3 class="settings-title">Settings</h3>
+            
+            <button id="refreshButton" class="btn-refresh">Refresh</button>
+            
+            <div id="status" class="status" style="display: none;"></div>
+            
+            <h4>S3 Configuration</h4>
+            <div>
+                <label for="s3Endpoint">S3 Endpoint URL:</label>
+                <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+            </div>
+            
+            <div>
+                <label for="s3AccessKey">Access Key ID:</label>
+                <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
+            </div>
+            
+            <div>
+                <label for="s3SecretKey">Secret Access Key:</label>
+                <input type="password" id="s3SecretKey" placeholder="Enter secret key">
+            </div>
+            
+            <div>
+                <label for="s3BucketName">Bucket Name:</label>
+                <input type="text" id="s3BucketName" placeholder="my-bucket">
+            </div>
+            
+            <div class="test-connection-container">
+                <button id="testS3Button" class="test-connection-button">Test S3 Connection</button>
+            </div>
+            <div id="s3ConnectionStatus" class="test-connection-status"></div>
+            
+            <h4>Weaviate Configuration</h4>
+            <div>
+                <label for="weaviateUrl">Weaviate URL:</label>
+                <input type="text" id="weaviateUrl" placeholder="weaviate.poc-weaviate.svc.cluster.local">
+            </div>
+            
+            <div>
+                <label for="weaviateToken">Weaviate Token:</label>
+                <input type="password" id="weaviateToken" placeholder="Enter auth token">
+            </div>
+            
+            <div class="test-connection-container">
+                <button id="testWeaviateButton" class="test-connection-button">Test Weaviate Connection</button>
+            </div>
+            <div id="weaviateConnectionStatus" class="test-connection-status"></div>
+            
+            <button id="saveSettingsButton" class="save-settings">Save Settings</button>
+            
+            <h4>Embedding</h4>
+            <p>Process and embed text descriptions into Weaviate (no image processing)</p>
+            <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
+            <button id="embedButton" class="embed-button">Embed Text Data</button>
+            <div id="embedStatus" class="status" style="display: none;"></div>
         </div>
     </div>
     
-    <!-- Keep any existing JavaScript from the original file -->
     <script>
-        // Show content function (chat or settings)
-        function showContent(contentType) {
-            // Update sidebar menu active state
-            document.querySelectorAll('.sidebar-menu-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            document.getElementById(`${contentType}-menu-item`).classList.add('active');
+        // Logging functionality
+        const logOutput = document.getElementById('logOutput');
+        
+        function logMessage(message, type = 'info') {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
             
-            // Show/hide containers
-            if (contentType === 'chat') {
-                document.getElementById('chat-container').style.display = 'flex';
-                document.getElementById('settings-container').style.display = 'none';
-            } else if (contentType === 'settings') {
-                document.getElementById('chat-container').style.display = 'none';
-                document.getElementById('settings-container').style.display = 'block';
-            }
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = `[${timeString}]`;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.className = `log-${type}`;
+            messageSpan.textContent = ` ${message}`;
+            
+            logEntry.appendChild(timeSpan);
+            logEntry.appendChild(messageSpan);
+            
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
         }
         
-        // Show settings tab function
-        function showSettingsTab(tabName) {
-            // Update tab active state
-            document.querySelectorAll('.settings-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            
-            // Show/hide tab content
-            document.querySelectorAll('.settings-tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-content`).classList.add('active');
-        }
-        
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set default state
-            showContent('chat');
-            
-            // Initialize settings values from localStorage if available
-            const settings = JSON.parse(localStorage.getItem('mercedes_settings') || '{}');
-            if (settings.s3_endpoint) document.getElementById('s3_endpoint').value = settings.s3_endpoint;
-            if (settings.aws_access_key_id) document.getElementById('aws_access_key_id').value = settings.aws_access_key_id;
-            if (settings.aws_secret_access_key) document.getElementById('aws_secret_access_key').value = settings.aws_secret_access_key;
-            if (settings.s3_bucket_name) document.getElementById('s3_bucket_name').value = settings.s3_bucket_name;
-            if (settings.weaviate_url) document.getElementById('weaviate_url').value = settings.weaviate_url;
-            if (settings.weaviate_token) document.getElementById('weaviate_token').value = settings.weaviate_token;
-            
-            // Add event listener for save settings button
-            document.getElementById('saveSettingsButton').addEventListener('click', saveSettings);
-            
-            // Add event listeners for test connection buttons
-            document.getElementById('testS3Button').addEventListener('click', testS3Connection);
-            document.getElementById('testWeaviateButton').addEventListener('click', testWeaviateConnection);
-            
-            // Add event listeners for training file and embedding
-            document.getElementById('retrieveTrainingButton').addEventListener('click', retrieveTrainingFile);
-            document.getElementById('embedButton').addEventListener('click', embedTrainingData);
-            
-            // Add event listeners for chat functionality
-            document.getElementById('sendButton').addEventListener('click', sendMessage);
-            document.getElementById('chatInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendMessage();
-            });
+        // Clear logs functionality
+        document.getElementById('clearLogButton').addEventListener('click', function() {
+            logOutput.innerHTML = '';
+            logMessage('Logs cleared');
         });
         
-        // Save settings function
-        async function saveSettings() {
-            const settings = {
-                s3_endpoint: document.getElementById('s3_endpoint').value,
-                aws_access_key_id: document.getElementById('aws_access_key_id').value,
-                aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
-                s3_bucket_name: document.getElementById('s3_bucket_name').value,
-                weaviate_url: document.getElementById('weaviate_url').value,
-                weaviate_token: document.getElementById('weaviate_token').value
-            };
+        // Display results in carousel
+        function displayResults(results) {
+            const carousel = document.getElementById('resultsCarousel');
+            carousel.innerHTML = '';
             
-            const statusDiv = document.getElementById('settingsStatus');
+            if (results.length === 0) {
+                carousel.innerHTML = '<p>No results found</p>';
+                logMessage('No results found', 'warning');
+                return;
+            }
+            
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'carousel-item';
+                
+                const img = document.createElement('img');
+                img.src = result.image;
+                img.alt = result.text;
+                
+                const caption = document.createElement('div');
+                caption.className = 'carousel-caption';
+                caption.textContent = result.text;
+                
+                item.appendChild(img);
+                item.appendChild(caption);
+                carousel.appendChild(item);
+                
+                logMessage(`Result ${index+1}: s3_key=${result.s3_key}, text="${result.text}"`);
+            });
+        }
+        
+        // Process server logs
+        function processServerLogs(logs) {
+            if (!logs || !Array.isArray(logs)) return;
+            
+            logs.forEach(log => {
+                // Determine log type based on content
+                let type = 'info';
+                if (log.includes('Error') || log.includes('Failed') || log.includes('error')) {
+                    type = 'error';
+                } else if (log.includes('Warning') || log.includes('warning')) {
+                    type = 'warning';
+                }
+                
+                logMessage(`[Server] ${log}`, type);
+            });
+        }
+        
+        // Search functionality
+        document.getElementById('searchButton').addEventListener('click', async function() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) return;
+            
+            logMessage(`Starting search for: "${query}"`);
+            
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsCarousel').innerHTML = '';
+            
+            try {
+                logMessage('Sending request to server...');
+                
+                const s3Endpoint = document.getElementById('s3Endpoint').value;
+                const s3AccessKey = document.getElementById('s3AccessKey').value;
+                const s3SecretKey = document.getElementById('s3SecretKey').value;
+                const s3BucketName = document.getElementById('s3BucketName').value;
+                const weaviateUrl = document.getElementById('weaviateUrl').value;
+                const weaviateToken = document.getElementById('weaviateToken').value;
+                
+                logMessage(`Using S3 endpoint: ${s3Endpoint || 'default'}`);
+                logMessage(`Using S3 bucket: ${s3BucketName || 'default'}`);
+                logMessage(`Using Weaviate URL: ${weaviateUrl || 'default'}`);
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName,
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
+                });
+                
+                logMessage('Received response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                if (data.success) {
+                    logMessage(`Found ${data.results.length} results`);
+                    displayResults(data.results);
+                } else {
+                    logMessage(`Error: ${data.error}`, 'error');
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                logMessage(`Error performing search: ${error}`, 'error');
+                alert('Error performing search: ' + error);
+            }
+        });
+        
+        // Settings functionality
+        document.getElementById('saveSettingsButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Saving...';
+            const statusDiv = document.getElementById('status');
             statusDiv.textContent = 'Saving settings...';
-            statusDiv.className = 'status-message info';
+            statusDiv.className = 'status info';
             statusDiv.style.display = 'block';
+            
+            logMessage('Saving settings to server...');
             
             try {
                 const response = await fetch('/api/update-settings', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(settings)
+                    body: JSON.stringify({
+                        s3_endpoint: document.getElementById('s3Endpoint').value,
+                        aws_access_key_id: document.getElementById('s3AccessKey').value,
+                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
+                        s3_bucket_name: document.getElementById('s3BucketName').value,
+                        weaviate_url: document.getElementById('weaviateUrl').value,
+                        weaviate_token: document.getElementById('weaviateToken').value
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Save to localStorage
-                    localStorage.setItem('mercedes_settings', JSON.stringify(settings));
-                    
                     statusDiv.textContent = 'Settings saved successfully!';
-                    statusDiv.className = 'status-message success';
+                    statusDiv.className = 'status success';
+                    logMessage('Settings saved successfully!', 'info');
                 } else {
-                    statusDiv.textContent = 'Error saving settings: ' + data.error;
-                    statusDiv.className = 'status-message error';
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Error saving settings: ${data.error}`, 'error');
                 }
             } catch (error) {
                 statusDiv.textContent = 'Error saving settings: ' + error;
-                statusDiv.className = 'status-message error';
+                statusDiv.className = 'status error';
+                logMessage(`Error saving settings: ${error}`, 'error');
             }
+            
+            button.disabled = false;
+            button.textContent = 'Save Settings';
+        });
+        
+        // Embedding functionality
+        document.getElementById('embedButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Embedding...';
+            const statusDiv = document.getElementById('embedStatus');
+            statusDiv.textContent = 'Processing and embedding text data...';
+            statusDiv.className = 'status info';
+            statusDiv.style.display = 'block';
+            
+            logMessage('Starting embedding process...');
+            
+            try {
+                // Parse the dataset JSON
+                let dataset;
+                try {
+                    const datasetText = document.getElementById('datasetInput').value;
+                    logMessage(`Parsing dataset: ${datasetText.length} characters`);
+                    
+                    dataset = JSON.parse(datasetText);
+                    if (!Array.isArray(dataset)) {
+                        throw new Error('Dataset must be an array');
+                    }
+                    
+                    logMessage(`Successfully parsed dataset with ${dataset.length} items`);
+                } catch (parseError) {
+                    statusDiv.textContent = 'Error parsing dataset JSON: ' + parseError;
+                    statusDiv.className = 'status error';
+                    logMessage(`Error parsing JSON: ${parseError}`, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Embed Text Data';
+                    return;
+                }
+                
+                logMessage(`Connecting to Weaviate at ${document.getElementById('weaviateUrl').value || 'default URL'}`);
+                
+                const response = await fetch('/api/embed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataset: dataset,
+                        weaviate_url: document.getElementById('weaviateUrl').value,
+                        weaviate_token: document.getElementById('weaviateToken').value
+                    })
+                });
+                
+                logMessage('Received embedding response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                if (data.success) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status success';
+                    logMessage(`Embedding completed: ${data.message}`, 'info');
+                } else {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Embedding error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error embedding data: ' + error;
+                statusDiv.className = 'status error';
+                logMessage(`Embedding error: ${error}`, 'error');
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Embed Text Data';
+        });
+        
+        // Refresh button functionality
+        document.getElementById('refreshButton').addEventListener('click', async function() {
+            try {
+                const button = this;
+                const statusDiv = document.getElementById('status');
+                
+                logMessage('Refreshing application...');
+                
+                // Disable button and show loading state
+                button.disabled = true;
+                button.textContent = 'Pulling changes...';
+                statusDiv.className = 'status info';
+                statusDiv.textContent = 'Pulling latest changes from GitHub...';
+                statusDiv.style.display = 'block';
+                
+                // Make API call to pull latest changes
+                let data;
+                try {
+                    const response = await fetch('/api/pull-latest', {
+                        method: 'POST'
+                    });
+                    
+                    if (!response.ok) {
+                        if (response.status === 503) {
+                            // This is likely the server restarting
+                            logMessage('Server is restarting (503 Service Unavailable). This is expected.', 'warning');
+                            statusDiv.className = 'status info';
+                            statusDiv.textContent = 'Application is restarting. Please wait...';
+                            
+                            // Skip trying to parse JSON and jump straight to polling
+                            await handleServerRestart();
+                            return;
+                        } else {
+                            throw new Error(`Server returned status ${response.status}`);
+                        }
+                    }
+                    
+                    data = await response.json();
+                    
+                    // Process server logs if available
+                    if (data.logs) {
+                        processServerLogs(data.logs);
+                    }
+                } catch (fetchError) {
+                    // If we get an error at this point, it might be that the server is restarting
+                    if (fetchError.message.includes('JSON') || fetchError.message.includes('Unexpected token')) {
+                        logMessage('Error parsing response, server might be restarting. Continuing with restart sequence...', 'warning');
+                        statusDiv.className = 'status info';
+                        statusDiv.textContent = 'Application is restarting. Please wait...';
+                        
+                        // Handle as a restart case
+                        await handleServerRestart();
+                        return;
+                    } else {
+                        // Rethrow for the outer catch block
+                        throw fetchError;
+                    }
+                }
+                
+                if (data.success) {
+                    logMessage(`Pull successful: ${data.changedFiles ? data.changedFiles.join(', ') : 'No changes'}`);
+                    
+                    if (data.needsRestart) {
+                        // Show message about the restart
+                        statusDiv.className = 'status info';
+                        
+                        if (data.requirementsChanged) {
+                            statusDiv.textContent = 'Requirements updated, application is restarting. Please wait...';
+                            logMessage('Requirements have been updated, application is restarting...', 'warning');
+                        } else {
+                            statusDiv.textContent = 'Application is restarting with new changes. Please wait...';
+                            logMessage('Application restarting...', 'warning');
+                        }
+                        
+                        // Server needs to restart - force restart by calling the endpoint again now that we've received our response
+                        try {
+                            await fetch('/api/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    cause: data.requirementsChanged ? 'requirements_update' : 'code_change'
+                                })
+                            });
+                        } catch (error) {
+                            // Expected to fail as server restarts
+                            logMessage('Server restarting...', 'info');
+                        }
+                        
+                        await handleServerRestart();
+                    } else if (data.changedFiles && data.changedFiles.includes('templates/index.html')) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Page template has changed. Refreshing...';
+                        logMessage('Page template has changed, refreshing');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else if (data.templatesChanged) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Template files have changed. Refreshing...';
+                        logMessage('Template files have changed, refreshing');
+                        // First, clear browser cache for this page
+                        fetch(window.location.href, { cache: 'reload', mode: 'no-cors' })
+                          .then(() => {
+                            // Force a complete page reload bypassing cache
+                            window.location.reload(true);
+                          });
+                    } else {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Successfully pulled latest changes!';
+                        logMessage('Successfully pulled latest changes (no restart needed)');
+                        button.disabled = false;
+                        button.textContent = 'Refresh';
+                    }
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    logMessage(`Pull error: ${data.error}`, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Refresh';
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('status');
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error pulling changes: ' + error;
+                statusDiv.style.display = 'block';
+                logMessage(`Error pulling changes: ${error}`, 'error');
+                document.getElementById('refreshButton').disabled = false;
+                document.getElementById('refreshButton').textContent = 'Refresh';
+            }
+        });
+        
+        // Function to handle server restart and polling
+        async function handleServerRestart() {
+            const statusDiv = document.getElementById('status');
+            const button = document.getElementById('refreshButton');
+            
+            // Wait a moment for the server to restart
+            logMessage('Waiting for server to restart...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Start polling to check if the server is back up
+            let attempts = 0;
+            const maxAttempts = 24; // 2 minutes total (24 * 5 seconds)
+            
+            const checkServer = async () => {
+                try {
+                    logMessage(`Checking if server is back up (attempt ${attempts + 1}/${maxAttempts})`);
+                    // Use the health check endpoint
+                    const healthCheck = await fetch('/health');
+                    if (healthCheck.ok) {
+                        try {
+                            const healthData = await healthCheck.json();
+                            if (healthData.status === 'ok') {
+                                logMessage('Server is back up, reloading page');
+                                window.location.reload();
+                                return;
+                            }
+                        } catch (e) {
+                            logMessage('Server responded but not with valid JSON, waiting...', 'warning');
+                        }
+                    }
+                } catch (error) {
+                    logMessage('Server not ready yet', 'warning');
+                }
+                
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(checkServer, 5000);
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Server restart is taking longer than expected. Please refresh the page manually.';
+                    logMessage('Server restart timeout', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Refresh';
+                }
+            };
+            
+            checkServer();
         }
         
-        // Log message function
-        function logMessage(message, type = 'info') {
-            const logsDiv = document.getElementById('embedLogs');
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logsDiv.appendChild(logEntry);
-            logsDiv.scrollTop = logsDiv.scrollHeight;
-        }
+        // Keyboard shortcut for search (Enter key)
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchButton').click();
+            }
+        });
+        
+        // Log initial app load
+        logMessage('Application loaded successfully');
         
         // Test S3 Connection functionality
-        async function testS3Connection() {
-            const button = document.getElementById('testS3Button');
-            const statusDiv = document.getElementById('s3ConnectionStatus');
-            
-            // Disable button and show testing message
+        document.getElementById('testS3Button').addEventListener('click', async function() {
+            const button = this;
             button.disabled = true;
             button.textContent = 'Testing...';
+            
+            const statusDiv = document.getElementById('s3ConnectionStatus');
             statusDiv.textContent = 'Testing S3 connection...';
             statusDiv.className = 'test-connection-status info';
             
             logMessage('Testing S3 connection...');
             
-            const settings = {
-                s3_endpoint: document.getElementById('s3_endpoint').value,
-                aws_access_key_id: document.getElementById('aws_access_key_id').value,
-                aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
-                s3_bucket_name: document.getElementById('s3_bucket_name').value
-            };
-            
-            if (!settings.s3_bucket_name) {
-                statusDiv.textContent = 'Bucket name is required';
-                statusDiv.className = 'test-connection-status error';
-                
-                button.disabled = false;
-                button.textContent = 'Test S3 Connection';
-                return;
-            }
-            
             try {
+                const s3Endpoint = document.getElementById('s3Endpoint').value;
+                const s3AccessKey = document.getElementById('s3AccessKey').value;
+                const s3SecretKey = document.getElementById('s3SecretKey').value;
+                const s3BucketName = document.getElementById('s3BucketName').value;
+                
+                if (!s3BucketName) {
+                    statusDiv.textContent = 'Error: Bucket name is required';
+                    statusDiv.className = 'test-connection-status error';
+                    logMessage('Error: Bucket name is required', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Test S3 Connection';
+                    return;
+                }
+                
                 const response = await fetch('/api/test-s3-connection', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(settings)
+                    body: JSON.stringify({
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName
+                    })
                 });
                 
                 const data = await response.json();
                 
-                // Log all returned log messages
+                // Process server logs if available
                 if (data.logs) {
-                    data.logs.forEach(log => {
-                        logMessage(log, data.success ? 'info' : 'error');
-                    });
+                    processServerLogs(data.logs);
                 }
                 
                 if (data.success) {
-                    statusDiv.textContent = data.message || 'S3 connection successful!';
+                    statusDiv.textContent = data.message;
                     statusDiv.className = 'test-connection-status success';
+                    logMessage('S3 connection test successful!', 'info');
                 } else {
-                    statusDiv.textContent = data.error || 'Failed to connect to S3';
+                    statusDiv.textContent = 'Error: ' + data.error;
                     statusDiv.className = 'test-connection-status error';
+                    logMessage('S3 connection test failed: ' + data.error, 'error');
                 }
             } catch (error) {
                 statusDiv.textContent = 'Error testing connection: ' + error;
@@ -842,53 +937,52 @@
                 logMessage('Error testing S3 connection: ' + error, 'error');
             }
             
-            // Re-enable button
             button.disabled = false;
             button.textContent = 'Test S3 Connection';
-        }
+        });
         
         // Test Weaviate Connection functionality
-        async function testWeaviateConnection() {
-            const button = document.getElementById('testWeaviateButton');
-            const statusDiv = document.getElementById('weaviateConnectionStatus');
-            
-            // Disable button and show testing message
+        document.getElementById('testWeaviateButton').addEventListener('click', async function() {
+            const button = this;
             button.disabled = true;
             button.textContent = 'Testing...';
+            
+            const statusDiv = document.getElementById('weaviateConnectionStatus');
             statusDiv.textContent = 'Testing Weaviate connection...';
             statusDiv.className = 'test-connection-status info';
             
             logMessage('Testing Weaviate connection...');
             
-            const settings = {
-                weaviate_url: document.getElementById('weaviate_url').value,
-                weaviate_token: document.getElementById('weaviate_token').value
-            };
-            
             try {
+                const weaviateUrl = document.getElementById('weaviateUrl').value;
+                const weaviateToken = document.getElementById('weaviateToken').value;
+                
                 const response = await fetch('/api/test-weaviate-connection', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(settings)
+                    body: JSON.stringify({
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
                 });
                 
                 const data = await response.json();
                 
-                // Log all returned log messages
+                // Process server logs if available
                 if (data.logs) {
-                    data.logs.forEach(log => {
-                        logMessage(log, data.success ? 'info' : 'error');
-                    });
+                    processServerLogs(data.logs);
                 }
                 
                 if (data.success) {
-                    statusDiv.textContent = data.message || 'Weaviate connection successful!';
+                    statusDiv.textContent = data.message;
                     statusDiv.className = 'test-connection-status success';
+                    logMessage('Weaviate connection test successful!', 'info');
                 } else {
-                    statusDiv.textContent = data.error || 'Failed to connect to Weaviate';
+                    statusDiv.textContent = 'Error: ' + data.error;
                     statusDiv.className = 'test-connection-status error';
+                    logMessage('Weaviate connection test failed: ' + data.error, 'error');
                 }
             } catch (error) {
                 statusDiv.textContent = 'Error testing connection: ' + error;
@@ -896,210 +990,9 @@
                 logMessage('Error testing Weaviate connection: ' + error, 'error');
             }
             
-            // Re-enable button
             button.disabled = false;
             button.textContent = 'Test Weaviate Connection';
-        }
-        
-        // Retrieve training file functionality
-        let sessionKey = null;
-        
-        async function retrieveTrainingFile() {
-            const button = document.getElementById('retrieveTrainingButton');
-            const statusDiv = document.getElementById('retrieveStatus');
-            
-            // Disable button and show retrieving message
-            button.disabled = true;
-            button.textContent = 'Retrieving...';
-            statusDiv.textContent = 'Retrieving training.json from S3...';
-            statusDiv.className = 'status-message info';
-            statusDiv.style.display = 'block';
-            
-            const settings = {
-                s3_endpoint: document.getElementById('s3_endpoint').value,
-                aws_access_key_id: document.getElementById('aws_access_key_id').value,
-                aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
-                s3_bucket_name: document.getElementById('s3_bucket_name').value
-            };
-            
-            if (!settings.s3_bucket_name) {
-                statusDiv.textContent = 'Bucket name is required';
-                statusDiv.className = 'status-message error';
-                
-                button.disabled = false;
-                button.textContent = 'Retrieve Training File';
-                return;
-            }
-            
-            try {
-                logMessage('Retrieving training.json file from S3...');
-                
-                const response = await fetch('/api/retrieve-training-file', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-                
-                const data = await response.json();
-                
-                // Log all returned log messages
-                if (data.logs) {
-                    data.logs.forEach(log => {
-                        logMessage(log, data.success ? 'info' : 'error');
-                    });
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message || 'Training file retrieved successfully!';
-                    statusDiv.className = 'status-message success';
-                    
-                    // Store the session key
-                    sessionKey = data.session_key;
-                    
-                    // Update UI to show count and enable embed button
-                    document.getElementById('entriesCount').textContent = `Found ${data.count} entries to embed`;
-                    document.querySelector('.training-info').style.display = 'block';
-                    document.getElementById('embedButtonContainer').style.display = 'block';
-                } else {
-                    statusDiv.textContent = data.error || 'Failed to retrieve training file';
-                    statusDiv.className = 'status-message error';
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error retrieving training file: ' + error;
-                statusDiv.className = 'status-message error';
-                logMessage('Error retrieving training file: ' + error, 'error');
-            }
-            
-            // Re-enable button
-            button.disabled = false;
-            button.textContent = 'Retrieve Training File';
-        }
-        
-        // Embed training data functionality
-        async function embedTrainingData() {
-            if (!sessionKey) {
-                logMessage('No training data available. Please retrieve the training file first.', 'error');
-                return;
-            }
-            
-            const button = document.getElementById('embedButton');
-            const statusDiv = document.getElementById('embedStatus');
-            
-            // Disable button and show embedding message
-            button.disabled = true;
-            button.textContent = 'Embedding...';
-            statusDiv.textContent = 'Embedding entries in Weaviate...';
-            statusDiv.className = 'status-message info';
-            statusDiv.style.display = 'block';
-            
-            const settings = {
-                weaviate_url: document.getElementById('weaviate_url').value,
-                weaviate_token: document.getElementById('weaviate_token').value,
-                session_key: sessionKey
-            };
-            
-            try {
-                logMessage('Starting embedding process...');
-                
-                const response = await fetch('/api/embed-training-data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-                
-                const data = await response.json();
-                
-                // Log all returned log messages
-                if (data.logs) {
-                    data.logs.forEach(log => {
-                        logMessage(log, data.success ? 'info' : 'error');
-                    });
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message || 'Embedding completed successfully!';
-                    statusDiv.className = 'status-message success';
-                    logMessage(`Embedding complete. Successfully embedded ${data.successful} entries. Failed: ${data.failed}`, 'success');
-                } else {
-                    statusDiv.textContent = data.error || 'Failed to embed training data';
-                    statusDiv.className = 'status-message error';
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error embedding training data: ' + error;
-                statusDiv.className = 'status-message error';
-                logMessage('Error embedding training data: ' + error, 'error');
-            }
-            
-            // Re-enable button
-            button.disabled = false;
-            button.textContent = 'Start Embedding Entries';
-        }
-        
-        // Function to send chat message
-        function sendMessage() {
-            const chatInput = document.getElementById('chatInput');
-            const chatMessages = document.getElementById('chatMessages');
-            
-            const message = chatInput.value.trim();
-            if (!message) return;
-            
-            // Add user message to chat
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'bg-gray-100 p-3 rounded-lg self-end max-w-[70%]';
-            userMessageDiv.textContent = message;
-            chatMessages.appendChild(userMessageDiv);
-            
-            // Clear input
-            chatInput.value = '';
-            
-            // Scroll to bottom
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            
-            // Show typing indicator
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'bg-blue-100 p-3 rounded-lg self-start max-w-[70%] typing-indicator';
-            typingDiv.textContent = 'Typing...';
-            chatMessages.appendChild(typingDiv);
-            
-            // Call API to get response
-            fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Remove typing indicator
-                chatMessages.removeChild(typingDiv);
-                
-                // Add bot response
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'bg-blue-100 p-3 rounded-lg self-start max-w-[70%]';
-                botMessageDiv.textContent = data.response || 'Sorry, I could not process your request.';
-                chatMessages.appendChild(botMessageDiv);
-                
-                // Scroll to bottom
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            })
-            .catch(error => {
-                // Remove typing indicator
-                chatMessages.removeChild(typingDiv);
-                
-                // Add error message
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'bg-red-100 p-3 rounded-lg self-start max-w-[70%] text-red-600';
-                errorDiv.textContent = 'Error: Could not get a response. Please try again.';
-                chatMessages.appendChild(errorDiv);
-                
-                console.error('Error:', error);
-            });
-        }
+        });
     </script>
 </body>
 </html>
