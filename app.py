@@ -47,19 +47,18 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None):
     url = weaviate_url or os.getenv('WEAVIATE_URL', 'weaviate.poc-weaviate.svc.cluster.local')
     token = weaviate_token or os.getenv('WEAVIATE_TOKEN')
     
-    headers = {}
     if token:
-        headers["x-auth-token"] = token
+        weaviate_headers = {"x-auth-token": token}
     
     try:
         client = weaviate.connect_to_custom(
             http_host=url,
             http_port=80,
             http_secure=False,
-            grpc_host=f"{url}-grpc.poc-weaviate.svc.cluster.local" if '-grpc' not in url else url,
+            grpc_host="weaviate-grpc.poc-weaviate.svc.cluster.local",
             grpc_port=50051,
             grpc_secure=False,
-            headers=headers,
+            headers=weaviate_headers,
             skip_init_checks=False
         )
         
