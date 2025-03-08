@@ -116,25 +116,38 @@
 
                     <!-- Weaviate Tab Content -->
                     <div class="tab-pane hidden" id="weaviate-tab-content" role="tabpanel" aria-labelledby="weaviate-tab">
-                        <div class="bg-white shadow-md rounded-lg p-6">
+                        <div class="p-4">
                             <h2 class="text-xl font-semibold mb-4">Weaviate Connection</h2>
-                            <div class="space-y-4">
+                            <div class="grid gap-4">
                                 <div>
                                     <label for="weaviate_url" class="block text-sm font-medium text-gray-700 mb-1">Weaviate URL</label>
-                                    <input type="text" id="weaviate_url" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                                           placeholder="weaviate.poc-weaviate.svc.cluster.local" 
-                                           value="weaviate.poc-weaviate.svc.cluster.local">
+                                    <input type="text" id="weaviate_url" class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                        placeholder="weaviate.poc-weaviate.svc.cluster.local"
+                                        value="weaviate.poc-weaviate.svc.cluster.local">
                                 </div>
                                 <div>
                                     <label for="weaviate_token" class="block text-sm font-medium text-gray-700 mb-1">Weaviate Auth Token</label>
-                                    <input type="password" id="weaviate_token" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                                           placeholder="Your Weaviate Auth Token">
+                                    <input type="password" id="weaviate_token" class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                        placeholder="Your Weaviate Auth Token">
                                 </div>
                                 <div>
                                     <button id="test-weaviate-connection" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                                         Test Weaviate Connection
                                     </button>
                                     <div id="weaviate-connection-status" class="mt-2 px-3 py-2 rounded-md hidden"></div>
+                                </div>
+                                
+                                <!-- Detailed Connection Logs -->
+                                <div id="weaviate-detailed-logs" class="hidden mt-4">
+                                    <h3 class="text-md font-semibold mb-2">Detailed Connection Logs</h3>
+                                    <div class="bg-gray-100 p-3 rounded-md overflow-auto max-h-60 text-xs font-mono">
+                                        <pre id="weaviate-logs-content"></pre>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button id="toggle-detailed-logs" class="text-sm text-blue-500 hover:underline">
+                                            Show/Hide Detailed Logs
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -259,9 +272,13 @@
             // Test Weaviate Connection
             document.getElementById('test-weaviate-connection').addEventListener('click', function() {
                 const statusElement = document.getElementById('weaviate-connection-status');
+                const detailedLogsSection = document.getElementById('weaviate-detailed-logs');
+                const logsContent = document.getElementById('weaviate-logs-content');
+                
+                // Show loading state
+                statusElement.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+                statusElement.classList.add('bg-blue-100', 'text-blue-800');
                 statusElement.textContent = 'Testing connection...';
-                statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-blue-100 text-blue-800';
-                statusElement.classList.remove('hidden');
                 
                 const weaviateConfig = {
                     weaviate_url: document.getElementById('weaviate_url').value,
@@ -272,23 +289,59 @@
                 fetch('/api/test-weaviate-connection', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(weaviateConfig)
                 })
                 .then(response => response.json())
                 .then(data => {
+                    statusElement.classList.remove('hidden', 'bg-blue-100', 'text-blue-800');
+                    
+                    // Set success or error message
                     if (data.success) {
-                        statusElement.textContent = 'Connection successful!';
-                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-green-100 text-green-800';
+                        statusElement.classList.add('bg-green-100', 'text-green-800');
+                        statusElement.textContent = 'Successfully connected to Weaviate!';
                     } else {
-                        statusElement.textContent = `Connection failed: ${data.error}`;
-                        statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
+                        statusElement.classList.add('bg-red-100', 'text-red-800');
+                        statusElement.textContent = data.error || 'Failed to connect to Weaviate';
+                    }
+                    
+                    // Process and display logs if available
+                    if (data.logs && data.logs.length > 0) {
+                        let detailedLogsFound = false;
+                        
+                        // Format logs for display
+                        const formattedLogs = data.logs.map(log => {
+                            if (log === "--- Detailed Connection Logs ---") {
+                                detailedLogsFound = true;
+                                return `\n----- DETAILED CONNECTION LOGS -----\n`;
+                            }
+                            return log;
+                        }).join('\n');
+                        
+                        // Display logs section if we have detailed logs
+                        if (detailedLogsFound) {
+                            logsContent.textContent = formattedLogs;
+                            detailedLogsSection.classList.remove('hidden');
+                            
+                            // Add toggle functionality for detailed logs
+                            document.getElementById('toggle-detailed-logs').addEventListener('click', function() {
+                                const logsContainer = logsContent.parentElement;
+                                if (logsContainer.classList.contains('max-h-60')) {
+                                    logsContainer.classList.remove('max-h-60');
+                                    logsContainer.classList.add('max-h-[500px]');
+                                } else {
+                                    logsContainer.classList.add('max-h-60');
+                                    logsContainer.classList.remove('max-h-[500px]');
+                                }
+                            });
+                        }
                     }
                 })
                 .catch(error => {
+                    statusElement.classList.remove('hidden', 'bg-blue-100', 'text-blue-800');
+                    statusElement.classList.add('bg-red-100', 'text-red-800');
                     statusElement.textContent = `Error: ${error.message}`;
-                    statusElement.className = 'mt-2 px-3 py-2 rounded-md bg-red-100 text-red-800';
                 });
             });
 

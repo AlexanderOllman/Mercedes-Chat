@@ -33,6 +33,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Create a specific logger for Weaviate connections with more verbose output
+weaviate_logger = logging.getLogger('weaviate_connection')
+weaviate_logger.setLevel(logging.DEBUG)  # Set to DEBUG for more detailed logs
+
+# Add a file handler for Weaviate logs
+weaviate_file_handler = logging.FileHandler('weaviate_connection.log')
+weaviate_file_handler.setLevel(logging.DEBUG)
+weaviate_file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+weaviate_logger.addHandler(weaviate_file_handler)
+
 # Embedding model setup
 def load_embedding_model():
     model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
@@ -42,15 +52,40 @@ def load_embedding_model():
 embedding_model = load_embedding_model()
 
 # Weaviate client setup
-def connect_to_weaviate(weaviate_url=None, weaviate_token=None):
-    """Connect to Weaviate instance using provided credentials or environment variables"""
+def connect_to_weaviate(weaviate_url=None, weaviate_token=None, verbose=False):
+    """Connect to Weaviate instance using provided credentials or environment variables
+    
+    Args:
+        weaviate_url (str, optional): URL of the Weaviate instance
+        weaviate_token (str, optional): Auth token for Weaviate
+        verbose (bool, optional): Whether to enable verbose logging
+    
+    Returns:
+        weaviate.Client or None: Connected client or None if connection failed
+    """
+    # Set local logger to DEBUG if verbose mode is enabled
+    if verbose:
+        weaviate_logger.setLevel(logging.DEBUG)
+        # Also add a stream handler to show debug logs in console
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        weaviate_logger.addHandler(console_handler)
+    
     url = weaviate_url or os.getenv('WEAVIATE_URL', 'weaviate.poc-weaviate.svc.cluster.local')
     token = weaviate_token or os.getenv('WEAVIATE_TOKEN')
     
+    weaviate_logger.debug(f"Attempting to connect to Weaviate at: {url}")
+    weaviate_logger.debug(f"Using auth token: {'Yes' if token else 'No'}")
+    
+    headers = {}
     if token:
-        weaviate_headers = {"x-auth-token": token}
+        headers = {"x-auth-token": token}
+        weaviate_logger.debug("Auth token provided, adding to request headers")
     
     try:
+        weaviate_logger.debug(f"Connection parameters: HTTP Host={url}, HTTP Port=80, GRPC Host=weaviate-grpc.poc-weaviate.svc.cluster.local, GRPC Port=50051")
+        
         client = weaviate.connect_to_custom(
             http_host=url,
             http_port=80,
@@ -58,17 +93,40 @@ def connect_to_weaviate(weaviate_url=None, weaviate_token=None):
             grpc_host="weaviate-grpc.poc-weaviate.svc.cluster.local",
             grpc_port=50051,
             grpc_secure=False,
-            headers=weaviate_headers,
+            headers=headers,
             skip_init_checks=False
         )
         
+        weaviate_logger.debug("Weaviate client created, checking if ready...")
+        
         if client.is_ready():
+            weaviate_logger.info("Successfully connected to Weaviate")
             logger.info("Successfully connected to Weaviate")
+            
+            # Get and log cluster status information
+            try:
+                meta = client.get_meta()
+                weaviate_logger.debug(f"Weaviate version: {meta.get('version', 'unknown')}")
+                weaviate_logger.debug(f"Weaviate status: {meta}")
+            except Exception as meta_e:
+                weaviate_logger.warning(f"Connected but couldn't retrieve metadata: {str(meta_e)}")
+            
             return client
         else:
+            weaviate_logger.error("Failed to connect to Weaviate: is_ready() returned False")
             logger.error("Failed to connect to Weaviate")
             return None
+    except weaviate.exceptions.WeaviateConnectionError as conn_err:
+        weaviate_logger.error(f"Weaviate connection error: {str(conn_err)}")
+        logger.error(f"Error connecting to Weaviate: {str(conn_err)}")
+        return None
+    except weaviate.exceptions.WeaviateAuthenticationError as auth_err:
+        weaviate_logger.error(f"Weaviate authentication error: {str(auth_err)}")
+        logger.error(f"Weaviate authentication error: {str(auth_err)}")
+        return None
     except Exception as e:
+        weaviate_logger.error(f"Unexpected error connecting to Weaviate: {str(e)}")
+        weaviate_logger.error(f"Exception type: {type(e).__name__}")
         logger.error(f"Error connecting to Weaviate: {str(e)}")
         return None
 
@@ -337,37 +395,51 @@ def chat():
 @app.route('/api/embed', methods=['POST'])
 def embed_data():
     try:
-        # Get Weaviate credentials from request
-        weaviate_url = request.json.get('weaviate_url')
-        weaviate_token = request.json.get('weaviate_token')
-        dataset = request.json.get('dataset', [])
-        
         logs = []
         
-        # Validate dataset
-        if not dataset or not isinstance(dataset, list):
-            logger.error("Invalid dataset format")
+        # Get dataset from request
+        dataset = request.json.get('dataset')
+        if not isinstance(dataset, list):
+            error_msg = "Invalid dataset format"
+            logger.error(error_msg)
             return jsonify({
                 'success': False,
-                'error': 'Invalid dataset format. Expected a list of items with s3_key and text fields.',
-                'logs': ['Invalid dataset format. Expected a list of items with s3_key and text fields.']
+                'error': error_msg,
+                'logs': [error_msg]
             }), 400
         
         logger.info(f"Processing {len(dataset)} dataset items")
-        logs.append(f"Processing {len(dataset)} dataset items for embedding")
+        logs.append(f"Processing {len(dataset)} dataset items")
+        
+        # Get S3 and Weaviate credentials from request
+        weaviate_url = request.json.get('weaviate_url')
+        weaviate_token = request.json.get('weaviate_token')
         
         # Connect to Weaviate
         logger.info(f"Connecting to Weaviate at {weaviate_url or 'default URL'}")
         logs.append(f"Connecting to Weaviate at {weaviate_url or 'default URL'}")
         
-        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token, verbose=True)
+        
+        # Check log file for recent entries if connection failed
         if not weaviate_client:
+            try:
+                with open('weaviate_connection.log', 'r') as log_file:
+                    # Get the last 20 lines from the log file
+                    log_lines = log_file.readlines()[-20:]
+                    # Add these detailed logs to our response
+                    detailed_logs = [line.strip() for line in log_lines]
+                    logs.extend(["--- Detailed Connection Logs ---"] + detailed_logs)
+            except Exception as log_err:
+                logs.append(f"Note: Could not read detailed logs: {str(log_err)}")
+                
             logger.error("Failed to connect to Weaviate")
+            logs.append("Failed to connect to Weaviate")
             return jsonify({
                 'success': False,
                 'error': 'Failed to connect to Weaviate',
                 'logs': logs + ['Failed to connect to Weaviate server']
-            }), 500
+            }), 400
         
         # Get Weaviate collection
         logger.info("Initializing Weaviate collection")
@@ -752,8 +824,20 @@ def test_weaviate_connection():
         logs = [f"Attempting to connect to Weaviate at {weaviate_url or 'default URL'}"]
         logger.info(logs[0])
         
-        # Connect to Weaviate
-        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        # Connect to Weaviate with verbose logging enabled
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token, verbose=True)
+        
+        # Check log file for recent entries
+        try:
+            with open('weaviate_connection.log', 'r') as log_file:
+                # Get the last 20 lines from the log file
+                log_lines = log_file.readlines()[-20:]
+                # Add these detailed logs to our response
+                detailed_logs = [line.strip() for line in log_lines]
+                logs.extend(["--- Detailed Connection Logs ---"] + detailed_logs)
+        except Exception as log_err:
+            logs.append(f"Note: Could not read detailed logs: {str(log_err)}")
+        
         if not weaviate_client:
             error_msg = "Failed to connect to Weaviate"
             logger.error(error_msg)
