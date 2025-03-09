@@ -34,7 +34,21 @@
         <!-- Main Content -->
         <div class="flex-1 overflow-auto">
             <div class="container p-6 mx-auto">
-                <h1 class="text-2xl font-bold mb-6">Settings</h1>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold">Settings</h1>
+                    <div class="flex space-x-2 items-center">
+                        <div class="flex items-center mr-2">
+                            <input type="checkbox" id="persist-settings" class="mr-2">
+                            <label for="persist-settings" class="text-sm font-medium text-gray-700">Save to .env file</label>
+                        </div>
+                        <button id="save-all-settings" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+                            Save All Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Save settings notification -->
+                <div id="save-settings-notification" class="mb-4 p-3 rounded-md hidden"></div>
 
                 <!-- Tab Navigation -->
                 <div class="mb-6 border-b border-gray-200">
@@ -112,6 +126,44 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- S3 Explorer Section -->
+                        <div class="bg-white shadow-md rounded-lg p-6 mt-6">
+                            <h2 class="text-xl font-semibold mb-4">S3 Explorer</h2>
+                            <div class="flex space-x-4">
+                                <div class="w-1/3">
+                                    <h3 class="text-lg font-medium mb-2">Buckets</h3>
+                                    <div id="s3-buckets-container" class="border border-gray-200 rounded-md p-2 max-h-80 overflow-y-auto">
+                                        <div class="flex items-center justify-center h-20 bg-gray-50">
+                                            <p class="text-gray-500">Connect to S3 to view buckets</p>
+                                        </div>
+                                    </div>
+                                    <button id="refresh-s3-buckets" class="mt-2 px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                        Refresh Buckets
+                                    </button>
+                                </div>
+                                <div class="w-2/3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="text-lg font-medium">Bucket Contents</h3>
+                                        <div id="s3-current-path" class="text-sm text-gray-500"></div>
+                                    </div>
+                                    <div id="s3-browser-breadcrumb" class="text-sm text-gray-600 mb-2 flex flex-wrap">
+                                        <span class="mr-1">Path:</span>
+                                    </div>
+                                    <div id="s3-objects-container" class="border border-gray-200 rounded-md p-2 max-h-80 overflow-y-auto">
+                                        <div class="flex items-center justify-center h-20 bg-gray-50">
+                                            <p class="text-gray-500">Select a bucket to view its contents</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 flex justify-between">
+                                        <button id="refresh-s3-objects" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                            Refresh Contents
+                                        </button>
+                                        <div id="s3-pagination" class="text-sm text-gray-600"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Weaviate Tab Content -->
@@ -147,6 +199,49 @@
                                         <button id="toggle-detailed-logs" class="text-sm text-blue-500 hover:underline">
                                             Show/Hide Detailed Logs
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Weaviate Explorer Section -->
+                        <div class="bg-white shadow-md rounded-lg p-6 mt-4">
+                            <h2 class="text-xl font-semibold mb-4">Weaviate Explorer</h2>
+                            <div class="flex space-x-4">
+                                <div class="w-1/3">
+                                    <h3 class="text-lg font-medium mb-2">Collections</h3>
+                                    <div id="weaviate-collections-container" class="border border-gray-200 rounded-md p-2 max-h-80 overflow-y-auto">
+                                        <div class="flex items-center justify-center h-20 bg-gray-50">
+                                            <p class="text-gray-500">Connect to Weaviate to view collections</p>
+                                        </div>
+                                    </div>
+                                    <button id="refresh-weaviate-collections" class="mt-2 px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                        Refresh Collections
+                                    </button>
+                                </div>
+                                <div class="w-2/3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h3 class="text-lg font-medium">Collection Objects</h3>
+                                        <div id="weaviate-current-collection" class="text-sm text-gray-500"></div>
+                                    </div>
+                                    <div id="weaviate-objects-container" class="border border-gray-200 rounded-md p-2 max-h-80 overflow-y-auto">
+                                        <div class="flex items-center justify-center h-20 bg-gray-50">
+                                            <p class="text-gray-500">Select a collection to view its objects</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 flex justify-between">
+                                        <button id="refresh-weaviate-objects" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                            Refresh Objects
+                                        </button>
+                                        <div class="flex items-center space-x-2">
+                                            <button id="prev-weaviate-page" class="px-2 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50" disabled>
+                                                Previous
+                                            </button>
+                                            <span id="weaviate-pagination" class="text-sm text-gray-600">Page 1</span>
+                                            <button id="next-weaviate-page" class="px-2 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50" disabled>
+                                                Next
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -462,6 +557,518 @@
                     embeddingStatus.textContent = `Error checking progress: ${error.message}`;
                 });
             }
+
+            // Save Settings functionality
+            document.getElementById('save-all-settings').addEventListener('click', function() {
+                const notificationElement = document.getElementById('save-settings-notification');
+                notificationElement.textContent = 'Saving settings...';
+                notificationElement.className = 'mb-4 p-3 rounded-md bg-blue-100 text-blue-800';
+                notificationElement.classList.remove('hidden');
+                
+                const persistToFile = document.getElementById('persist-settings').checked;
+                
+                const settings = {
+                    // S3 settings
+                    s3_endpoint: document.getElementById('s3_endpoint').value,
+                    aws_access_key_id: document.getElementById('aws_access_key_id').value,
+                    aws_secret_access_key: document.getElementById('aws_secret_access_key').value,
+                    s3_bucket_name: document.getElementById('s3_bucket_name').value,
+                    
+                    // Weaviate settings
+                    weaviate_url: document.getElementById('weaviate_url').value,
+                    weaviate_token: document.getElementById('weaviate_token').value,
+                    
+                    // Save to file option
+                    persistToFile: persistToFile
+                };
+                
+                fetch('/api/save-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        notificationElement.textContent = data.message;
+                        notificationElement.className = 'mb-4 p-3 rounded-md bg-green-100 text-green-800';
+                        
+                        // Refresh explorers if settings were saved successfully
+                        if (document.getElementById('s3-tab').getAttribute('aria-selected') === 'true') {
+                            document.getElementById('refresh-s3-buckets').click();
+                        } else if (document.getElementById('weaviate-tab').getAttribute('aria-selected') === 'true') {
+                            document.getElementById('refresh-weaviate-collections').click();
+                        }
+                    } else {
+                        notificationElement.textContent = `Error: ${data.error}`;
+                        notificationElement.className = 'mb-4 p-3 rounded-md bg-red-100 text-red-800';
+                    }
+                    
+                    // Hide notification after 5 seconds
+                    setTimeout(() => {
+                        notificationElement.classList.add('hidden');
+                    }, 5000);
+                })
+                .catch(error => {
+                    notificationElement.textContent = `Error: ${error.message}`;
+                    notificationElement.className = 'mb-4 p-3 rounded-md bg-red-100 text-red-800';
+                    
+                    // Hide notification after 5 seconds
+                    setTimeout(() => {
+                        notificationElement.classList.add('hidden');
+                    }, 5000);
+                });
+            });
+
+            // Load current env values on page load
+            function loadSavedSettings() {
+                fetch('/api/list-s3-buckets')
+                    .then(response => {
+                        if (response.ok) {
+                            // If we can access S3, that means credentials are configured
+                            document.getElementById('refresh-s3-buckets').click();
+                        }
+                    })
+                    .catch(error => console.error('Error checking S3 credentials:', error));
+                    
+                fetch('/api/list-weaviate-schemas')
+                    .then(response => {
+                        if (response.ok) {
+                            // If we can access Weaviate, that means credentials are configured
+                            document.getElementById('refresh-weaviate-collections').click();
+                        }
+                    })
+                    .catch(error => console.error('Error checking Weaviate credentials:', error));
+            }
+
+            // Call loadSavedSettings on page load
+            loadSavedSettings();
+        });
+
+        // S3 Explorer functionality
+        class S3Explorer {
+            constructor() {
+                this.currentBucket = '';
+                this.currentPrefix = '';
+                this.breadcrumbPath = [];
+
+                // Initialize event listeners
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                // Refresh buckets button
+                document.getElementById('refresh-s3-buckets').addEventListener('click', () => {
+                    this.loadBuckets();
+                });
+
+                // Refresh objects button
+                document.getElementById('refresh-s3-objects').addEventListener('click', () => {
+                    if (this.currentBucket) {
+                        this.loadObjects(this.currentBucket, this.currentPrefix);
+                    }
+                });
+            }
+
+            loadBuckets() {
+                const bucketsContainer = document.getElementById('s3-buckets-container');
+                bucketsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">Loading buckets...</p></div>';
+
+                fetch('/api/list-s3-buckets')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.buckets && data.buckets.length > 0) {
+                                bucketsContainer.innerHTML = '';
+                                data.buckets.forEach(bucket => {
+                                    const bucketElement = document.createElement('div');
+                                    bucketElement.className = 'flex items-center p-2 hover:bg-gray-50 cursor-pointer rounded';
+                                    bucketElement.innerHTML = `
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1H8a3 3 0 00-3 3v1.5a1.5 1.5 0 01-3 0V6z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="truncate">${bucket}</span>
+                                    `;
+                                    bucketElement.addEventListener('click', () => {
+                                        // Mark selected bucket
+                                        const allBuckets = bucketsContainer.querySelectorAll('div');
+                                        allBuckets.forEach(b => b.classList.remove('bg-blue-50', 'border-blue-200'));
+                                        bucketElement.classList.add('bg-blue-50', 'border-blue-200');
+                                        
+                                        // Update current bucket and load its contents
+                                        this.currentBucket = bucket;
+                                        this.currentPrefix = '';
+                                        this.breadcrumbPath = [];
+                                        this.loadObjects(bucket, '');
+                                    });
+                                    bucketsContainer.appendChild(bucketElement);
+                                });
+                            } else {
+                                bucketsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">No buckets found</p></div>';
+                            }
+                        } else {
+                            bucketsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${data.error}</p></div>`;
+                        }
+                    })
+                    .catch(error => {
+                        bucketsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${error.message}</p></div>`;
+                    });
+            }
+
+            loadObjects(bucket, prefix = '') {
+                const objectsContainer = document.getElementById('s3-objects-container');
+                const currentPathElement = document.getElementById('s3-current-path');
+                
+                objectsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">Loading objects...</p></div>';
+                
+                // Update current state
+                this.currentBucket = bucket;
+                this.currentPrefix = prefix;
+                currentPathElement.textContent = `Bucket: ${bucket}`;
+                
+                // Update breadcrumb
+                this.updateBreadcrumb();
+                
+                fetch(`/api/list-s3-objects?bucket=${encodeURIComponent(bucket)}&prefix=${encodeURIComponent(prefix)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            objectsContainer.innerHTML = '';
+                            
+                            // Add parent directory option if we're in a subfolder
+                            if (prefix) {
+                                const parentElement = document.createElement('div');
+                                parentElement.className = 'flex items-center p-2 hover:bg-gray-50 cursor-pointer rounded';
+                                parentElement.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-gray-600">..</span>
+                                `;
+                                parentElement.addEventListener('click', () => {
+                                    // Go up one level
+                                    this.breadcrumbPath.pop();
+                                    const newPrefix = this.breadcrumbPath.length > 0 ? 
+                                        this.breadcrumbPath.join('/') + '/' : 
+                                        '';
+                                    this.loadObjects(bucket, newPrefix);
+                                });
+                                objectsContainer.appendChild(parentElement);
+                            }
+                            
+                            // First add folders
+                            if (data.folders && data.folders.length > 0) {
+                                data.folders.forEach(folder => {
+                                    const folderElement = document.createElement('div');
+                                    folderElement.className = 'flex items-center p-2 hover:bg-gray-50 cursor-pointer rounded';
+                                    
+                                    // Extract folder name from path
+                                    let folderName = folder.name;
+                                    if (prefix && folderName.startsWith(prefix)) {
+                                        folderName = folderName.substring(prefix.length);
+                                    }
+                                    // Remove trailing slash
+                                    if (folderName.endsWith('/')) {
+                                        folderName = folderName.slice(0, -1);
+                                    }
+                                    
+                                    folderElement.innerHTML = `
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                        </svg>
+                                        <span class="truncate">${folderName}</span>
+                                    `;
+                                    folderElement.addEventListener('click', () => {
+                                        // Navigate into this folder
+                                        this.breadcrumbPath.push(folderName);
+                                        this.loadObjects(bucket, folder.name);
+                                    });
+                                    objectsContainer.appendChild(folderElement);
+                                });
+                            }
+                            
+                            // Then add files
+                            if (data.objects && data.objects.length > 0) {
+                                data.objects.forEach(object => {
+                                    const objectElement = document.createElement('div');
+                                    objectElement.className = 'flex items-center justify-between p-2 hover:bg-gray-50 rounded';
+                                    
+                                    // Extract file name from path
+                                    let fileName = object.name;
+                                    if (prefix && fileName.startsWith(prefix)) {
+                                        fileName = fileName.substring(prefix.length);
+                                    }
+                                    
+                                    const fileSize = this.formatFileSize(object.size);
+                                    const lastModified = new Date(object.lastModified).toLocaleString();
+                                    
+                                    objectElement.innerHTML = `
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="truncate" title="${fileName}">${fileName}</span>
+                                        </div>
+                                        <div class="flex text-xs text-gray-500">
+                                            <span class="mr-3">${fileSize}</span>
+                                            <span>${lastModified}</span>
+                                        </div>
+                                    `;
+                                    objectsContainer.appendChild(objectElement);
+                                });
+                            }
+                            
+                            // Show empty message if no content
+                            if ((!data.folders || data.folders.length === 0) && (!data.objects || data.objects.length === 0)) {
+                                objectsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">Empty folder</p></div>';
+                            }
+                            
+                            // Update pagination info
+                            const paginationElement = document.getElementById('s3-pagination');
+                            if (data.isTruncated) {
+                                paginationElement.textContent = 'More items available. Showing first 1000 items.';
+                            } else {
+                                paginationElement.textContent = '';
+                            }
+                        } else {
+                            objectsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${data.error}</p></div>`;
+                        }
+                    })
+                    .catch(error => {
+                        objectsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${error.message}</p></div>`;
+                    });
+            }
+            
+            updateBreadcrumb() {
+                const breadcrumbElement = document.getElementById('s3-browser-breadcrumb');
+                breadcrumbElement.innerHTML = '<span class="mr-1">Path:</span>';
+                
+                // Add root
+                const rootElement = document.createElement('span');
+                rootElement.className = 'text-blue-600 hover:underline cursor-pointer mr-1';
+                rootElement.textContent = '/';
+                rootElement.addEventListener('click', () => {
+                    this.breadcrumbPath = [];
+                    this.loadObjects(this.currentBucket, '');
+                });
+                breadcrumbElement.appendChild(rootElement);
+                
+                // Add path segments
+                this.breadcrumbPath.forEach((segment, index) => {
+                    // Add separator
+                    const separatorElement = document.createElement('span');
+                    separatorElement.className = 'mr-1';
+                    separatorElement.textContent = '>';
+                    breadcrumbElement.appendChild(separatorElement);
+                    
+                    // Add segment
+                    const segmentElement = document.createElement('span');
+                    segmentElement.className = 'text-blue-600 hover:underline cursor-pointer mr-1';
+                    segmentElement.textContent = segment;
+                    segmentElement.addEventListener('click', () => {
+                        // Navigate to this path segment
+                        this.breadcrumbPath = this.breadcrumbPath.slice(0, index + 1);
+                        const newPrefix = this.breadcrumbPath.join('/') + '/';
+                        this.loadObjects(this.currentBucket, newPrefix);
+                    });
+                    breadcrumbElement.appendChild(segmentElement);
+                });
+            }
+            
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Initialize S3Explorer when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            window.s3Explorer = new S3Explorer();
+        });
+
+        // Weaviate Explorer functionality
+        class WeaviateExplorer {
+            constructor() {
+                this.currentCollection = '';
+                this.currentOffset = 0;
+                this.pageSize = 20;
+                this.totalItems = 0;
+
+                // Initialize event listeners
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                // Refresh collections button
+                document.getElementById('refresh-weaviate-collections').addEventListener('click', () => {
+                    this.loadCollections();
+                });
+
+                // Refresh objects button
+                document.getElementById('refresh-weaviate-objects').addEventListener('click', () => {
+                    if (this.currentCollection) {
+                        this.loadObjects(this.currentCollection, this.currentOffset);
+                    }
+                });
+
+                // Pagination buttons
+                document.getElementById('prev-weaviate-page').addEventListener('click', () => {
+                    if (this.currentOffset >= this.pageSize) {
+                        this.currentOffset -= this.pageSize;
+                        this.loadObjects(this.currentCollection, this.currentOffset);
+                    }
+                });
+
+                document.getElementById('next-weaviate-page').addEventListener('click', () => {
+                    if (this.currentOffset + this.pageSize < this.totalItems) {
+                        this.currentOffset += this.pageSize;
+                        this.loadObjects(this.currentCollection, this.currentOffset);
+                    }
+                });
+            }
+
+            loadCollections() {
+                const collectionsContainer = document.getElementById('weaviate-collections-container');
+                collectionsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">Loading collections...</p></div>';
+
+                fetch('/api/list-weaviate-schemas')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.collections && data.collections.length > 0) {
+                                collectionsContainer.innerHTML = '';
+                                data.collections.forEach(collection => {
+                                    const collectionElement = document.createElement('div');
+                                    collectionElement.className = 'flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded';
+                                    
+                                    const countDisplay = collection.count >= 0 ? collection.count : '?';
+                                    
+                                    collectionElement.innerHTML = `
+                                        <div class="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                            </svg>
+                                            <span class="truncate">${collection.name}</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">${countDisplay}</span>
+                                    `;
+                                    collectionElement.addEventListener('click', () => {
+                                        // Mark selected collection
+                                        const allCollections = collectionsContainer.querySelectorAll('div');
+                                        allCollections.forEach(c => c.classList.remove('bg-purple-50', 'border-purple-200'));
+                                        collectionElement.classList.add('bg-purple-50', 'border-purple-200');
+                                        
+                                        // Update current collection and load its objects
+                                        this.currentCollection = collection.name;
+                                        this.currentOffset = 0;
+                                        this.loadObjects(collection.name, 0);
+                                    });
+                                    collectionsContainer.appendChild(collectionElement);
+                                });
+                            } else {
+                                collectionsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">No collections found</p></div>';
+                            }
+                        } else {
+                            collectionsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${data.error}</p></div>`;
+                        }
+                    })
+                    .catch(error => {
+                        collectionsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${error.message}</p></div>`;
+                    });
+            }
+
+            loadObjects(collection, offset = 0) {
+                const objectsContainer = document.getElementById('weaviate-objects-container');
+                const currentCollectionElement = document.getElementById('weaviate-current-collection');
+                const paginationElement = document.getElementById('weaviate-pagination');
+                const prevButton = document.getElementById('prev-weaviate-page');
+                const nextButton = document.getElementById('next-weaviate-page');
+                
+                objectsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">Loading objects...</p></div>';
+                
+                // Update current state
+                this.currentCollection = collection;
+                this.currentOffset = offset;
+                currentCollectionElement.textContent = `Collection: ${collection}`;
+                
+                fetch(`/api/list-weaviate-objects?collection=${encodeURIComponent(collection)}&offset=${offset}&limit=${this.pageSize}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            objectsContainer.innerHTML = '';
+                            this.totalItems = data.pagination.total;
+                            
+                            if (data.objects && data.objects.length > 0) {
+                                data.objects.forEach(object => {
+                                    const objectElement = document.createElement('div');
+                                    objectElement.className = 'flex flex-col p-3 border-b border-gray-100 hover:bg-gray-50';
+                                    
+                                    // Format object data for display
+                                    const objectId = object.id || 'Unknown ID';
+                                    const imageUrl = object.image_url || '';
+                                    const description = object.description || 'No description';
+                                    
+                                    let imageContent = '';
+                                    if (imageUrl) {
+                                        imageContent = `
+                                            <div class="flex-shrink-0 mr-3">
+                                                <img src="${imageUrl}" alt="Thumbnail" class="w-16 h-16 object-cover rounded">
+                                            </div>
+                                        `;
+                                    }
+                                    
+                                    objectElement.innerHTML = `
+                                        <div class="flex items-start mb-1">
+                                            ${imageUrl ? imageContent : ''}
+                                            <div class="flex-1">
+                                                <div class="text-sm font-medium text-gray-700 mb-1">${objectId}</div>
+                                                <div class="text-xs text-gray-500">${description}</div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    objectsContainer.appendChild(objectElement);
+                                });
+                                
+                                // Update pagination
+                                const currentPage = Math.floor(offset / this.pageSize) + 1;
+                                const totalPages = Math.ceil(this.totalItems / this.pageSize);
+                                paginationElement.textContent = `Page ${currentPage} of ${totalPages}`;
+                                
+                                // Enable/disable pagination buttons
+                                prevButton.disabled = offset <= 0;
+                                nextButton.disabled = offset + this.pageSize >= this.totalItems;
+                            } else {
+                                objectsContainer.innerHTML = '<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-gray-500">No objects found in this collection</p></div>';
+                                paginationElement.textContent = 'No results';
+                                prevButton.disabled = true;
+                                nextButton.disabled = true;
+                            }
+                        } else {
+                            objectsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${data.error}</p></div>`;
+                            paginationElement.textContent = 'Error';
+                            prevButton.disabled = true;
+                            nextButton.disabled = true;
+                        }
+                    })
+                    .catch(error => {
+                        objectsContainer.innerHTML = `<div class="flex items-center justify-center h-20 bg-gray-50"><p class="text-red-500">Error: ${error.message}</p></div>`;
+                        paginationElement.textContent = 'Error';
+                        prevButton.disabled = true;
+                        nextButton.disabled = true;
+                    });
+            }
+        }
+
+        // Initialize WeaviateExplorer when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            window.weaviateExplorer = new WeaviateExplorer();
         });
     </script>
 </body>

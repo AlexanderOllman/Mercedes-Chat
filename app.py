@@ -1170,5 +1170,296 @@ def embedding_progress():
     global embedding_status
     return jsonify(embedding_status)
 
+@app.route('/api/list-s3-buckets', methods=['GET'])
+def list_s3_buckets():
+    """List all S3 buckets available to the configured credentials"""
+    try:
+        s3_client = get_s3_client()
+        
+        response = s3_client.list_buckets()
+        buckets = [bucket['Name'] for bucket in response.get('Buckets', [])]
+        
+        return jsonify({
+            'success': True,
+            'buckets': buckets
+        })
+    except Exception as e:
+        logger.error(f"Error listing S3 buckets: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/list-s3-objects', methods=['GET'])
+def list_s3_objects():
+    """List objects in a specific S3 bucket with optional prefix"""
+    try:
+        bucket_name = request.args.get('bucket')
+        prefix = request.args.get('prefix', '')
+        delimiter = request.args.get('delimiter', '/')
+        
+        if not bucket_name:
+            return jsonify({
+                'success': False,
+                'error': 'Bucket name is required'
+            }), 400
+            
+        s3_client = get_s3_client()
+        
+        # List objects with pagination support
+        params = {
+            'Bucket': bucket_name,
+            'Delimiter': delimiter,
+            'MaxKeys': 1000
+        }
+        
+        if prefix:
+            params['Prefix'] = prefix
+            
+        response = s3_client.list_objects_v2(**params)
+        
+        # Process the response
+        result = {
+            'success': True,
+            'prefix': prefix,
+            'objects': [],
+            'folders': [],
+            'isTruncated': response.get('IsTruncated', False),
+            'nextContinuationToken': response.get('NextContinuationToken', '')
+        }
+        
+        # Extract folders (CommonPrefixes)
+        for common_prefix in response.get('CommonPrefixes', []):
+            folder_name = common_prefix.get('Prefix', '')
+            result['folders'].append({
+                'name': folder_name,
+                'type': 'folder'
+            })
+            
+        # Extract objects
+        for content in response.get('Contents', []):
+            # Skip the prefix itself if it's included as an object
+            if content.get('Key') == prefix:
+                continue
+                
+            # Get file size and last modified
+            size = content.get('Size', 0)
+            last_modified = content.get('LastModified').isoformat() if content.get('LastModified') else ''
+            
+            # Determine if this is a folder (ends with delimiter) or a file
+            key = content.get('Key', '')
+            is_folder = key.endswith(delimiter)
+            
+            # If it's a folder that wasn't already included in CommonPrefixes
+            if is_folder:
+                result['folders'].append({
+                    'name': key,
+                    'size': size,
+                    'lastModified': last_modified,
+                    'type': 'folder'
+                })
+            else:
+                result['objects'].append({
+                    'name': key,
+                    'size': size,
+                    'lastModified': last_modified,
+                    'type': 'file'
+                })
+                
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error listing S3 objects: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/list-weaviate-schemas', methods=['GET'])
+def list_weaviate_schemas():
+    """List all schemas/collections in Weaviate"""
+    try:
+        weaviate_client = connect_to_weaviate()
+        
+        if not weaviate_client:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Weaviate'
+            }), 400
+            
+        # Get schema details
+        schema = weaviate_client.schema.get()
+        
+        # Extract classes (collections)
+        collections = []
+        for class_obj in schema.get('classes', []):
+            class_name = class_obj.get('class')
+            
+            # Get object count for this class
+            try:
+                count = weaviate_client.query.aggregate(class_name).with_meta_count().do()
+                object_count = count.get('data', {}).get('Aggregate', {}).get(class_name, [{}])[0].get('meta', {}).get('count', 0)
+            except Exception as count_err:
+                logger.warning(f"Error getting count for {class_name}: {str(count_err)}")
+                object_count = -1
+                
+            collections.append({
+                'name': class_name,
+                'description': class_obj.get('description', ''),
+                'vectorIndexType': class_obj.get('vectorIndexType', ''),
+                'vectorizer': class_obj.get('vectorizer', ''),
+                'count': object_count
+            })
+            
+        return jsonify({
+            'success': True,
+            'collections': collections
+        })
+    except Exception as e:
+        logger.error(f"Error listing Weaviate schemas: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/list-weaviate-objects', methods=['GET'])
+def list_weaviate_objects():
+    """List objects in a specific Weaviate collection with pagination"""
+    try:
+        collection_name = request.args.get('collection')
+        limit = int(request.args.get('limit', 20))
+        offset = int(request.args.get('offset', 0))
+        
+        if not collection_name:
+            return jsonify({
+                'success': False,
+                'error': 'Collection name is required'
+            }), 400
+            
+        weaviate_client = connect_to_weaviate()
+        
+        if not weaviate_client:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to connect to Weaviate'
+            }), 400
+            
+        # Get total count first
+        try:
+            count_result = weaviate_client.query.aggregate(collection_name).with_meta_count().do()
+            total_count = count_result.get('data', {}).get('Aggregate', {}).get(collection_name, [{}])[0].get('meta', {}).get('count', 0)
+        except Exception as count_err:
+            logger.warning(f"Error getting count for {collection_name}: {str(count_err)}")
+            total_count = -1
+            
+        # Now get objects with pagination
+        try:
+            query_result = (
+                weaviate_client.query
+                .get(collection_name, ['id', 'image_url', 'description'])
+                .with_limit(limit)
+                .with_offset(offset)
+                .do()
+            )
+            
+            objects = query_result.get('data', {}).get('Get', {}).get(collection_name, [])
+        except Exception as query_err:
+            logger.error(f"Error querying objects in {collection_name}: {str(query_err)}")
+            return jsonify({
+                'success': False,
+                'error': f'Error querying objects: {str(query_err)}'
+            }), 500
+            
+        return jsonify({
+            'success': True,
+            'collection': collection_name,
+            'objects': objects,
+            'pagination': {
+                'total': total_count,
+                'offset': offset,
+                'limit': limit
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error listing Weaviate objects: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/save-settings', methods=['POST'])
+def save_settings():
+    """Save settings to environmental variables and optionally to .env file"""
+    try:
+        # Get settings from request
+        settings = request.json
+        persistToFile = settings.pop('persistToFile', False)
+        
+        # Update environment variables for this session
+        if settings.get('s3_endpoint'):
+            os.environ['S3_ENDPOINT_URL'] = settings.get('s3_endpoint')
+        if settings.get('aws_access_key_id'):
+            os.environ['AWS_ACCESS_KEY_ID'] = settings.get('aws_access_key_id')
+        if settings.get('aws_secret_access_key'):
+            os.environ['AWS_SECRET_ACCESS_KEY'] = settings.get('aws_secret_access_key')
+        if settings.get('s3_bucket_name'):
+            os.environ['S3_BUCKET_NAME'] = settings.get('s3_bucket_name')
+        if settings.get('weaviate_url'):
+            os.environ['WEAVIATE_URL'] = settings.get('weaviate_url')
+        if settings.get('weaviate_token'):
+            os.environ['WEAVIATE_TOKEN'] = settings.get('weaviate_token')
+            
+        # Optionally save to .env file for persistence
+        if persistToFile:
+            try:
+                # Read existing .env file if it exists
+                env_data = {}
+                if os.path.exists('.env'):
+                    with open('.env', 'r') as env_file:
+                        for line in env_file:
+                            line = line.strip()
+                            if not line or line.startswith('#'):
+                                continue
+                            key, value = line.split('=', 1)
+                            env_data[key] = value
+                
+                # Update with new values
+                if settings.get('s3_endpoint'):
+                    env_data['S3_ENDPOINT_URL'] = settings.get('s3_endpoint')
+                if settings.get('aws_access_key_id'):
+                    env_data['AWS_ACCESS_KEY_ID'] = settings.get('aws_access_key_id')
+                if settings.get('aws_secret_access_key'):
+                    env_data['AWS_SECRET_ACCESS_KEY'] = settings.get('aws_secret_access_key')
+                if settings.get('s3_bucket_name'):
+                    env_data['S3_BUCKET_NAME'] = settings.get('s3_bucket_name')
+                if settings.get('weaviate_url'):
+                    env_data['WEAVIATE_URL'] = settings.get('weaviate_url')
+                if settings.get('weaviate_token'):
+                    env_data['WEAVIATE_TOKEN'] = settings.get('weaviate_token')
+                
+                # Write back to .env file
+                with open('.env', 'w') as env_file:
+                    for key, value in env_data.items():
+                        env_file.write(f"{key}={value}\n")
+                
+                logger.info("Settings saved to .env file")
+            except Exception as file_err:
+                logger.error(f"Error saving settings to .env file: {str(file_err)}")
+                return jsonify({
+                    'success': True,
+                    'message': 'Settings updated for this session only. Failed to save to .env file.',
+                    'fileError': str(file_err)
+                })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings updated successfully' + (' and saved to .env file' if persistToFile else ' for this session')
+        })
+    except Exception as e:
+        logger.error(f"Error saving settings: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)
