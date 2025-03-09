@@ -966,7 +966,8 @@ def test_weaviate_connection():
             logs.append(log_msg)
             
             # List collection names
-            collection_names = [collection.name for collection in collections]
+            # In v4, collections.list_all() already returns collection names as strings
+            collection_names = collections  # No need to extract .name attribute
             if collection_names:
                 logs.append(f"Collection names: {', '.join(collection_names)}")
             
