@@ -406,13 +406,8 @@
                         
                         <div>
                             <label for="s3BucketName">Bucket Name:</label>
-                            <input type="text" id="s3BucketName" placeholder="my-bucket">
+                            <input type="text" id="s3BucketName" placeholder="my-bucket" value="poc-mercedes-gp">
                         </div>
-                        
-                        <div class="test-connection-container">
-                            <button id="testS3Button" class="test-connection-button">Test S3 Connection</button>
-                        </div>
-                        <div id="s3ConnectionStatus" class="test-connection-status"></div>
                         
                         <h4>Weaviate Configuration</h4>
                         <div>
@@ -424,11 +419,6 @@
                             <label for="weaviateToken">Weaviate Token:</label>
                             <input type="password" id="weaviateToken" placeholder="Enter auth token">
                         </div>
-                        
-                        <div class="test-connection-container">
-                            <button id="testWeaviateButton" class="test-connection-button">Test Weaviate Connection</button>
-                        </div>
-                        <div id="weaviateConnectionStatus" class="test-connection-status"></div>
                         
                         <button id="saveSettingsButton" class="save-settings">Save Settings</button>
                         
@@ -604,43 +594,125 @@
             button.disabled = true;
             button.textContent = 'Saving...';
             const statusDiv = document.getElementById('status');
-            statusDiv.textContent = 'Saving settings...';
+            statusDiv.textContent = 'Testing connections and saving settings...';
             statusDiv.className = 'status info';
             statusDiv.style.display = 'block';
             
-            logMessage('Saving settings to server...');
+            logMessage('Testing connections and saving settings...');
             
             try {
+                // Test S3 connection first
+                logMessage('Testing S3 connection...');
+                const s3Endpoint = document.getElementById('s3Endpoint').value;
+                const s3AccessKey = document.getElementById('s3AccessKey').value;
+                const s3SecretKey = document.getElementById('s3SecretKey').value;
+                const s3BucketName = document.getElementById('s3BucketName').value;
+                
+                if (!s3BucketName) {
+                    logMessage('Error: S3 bucket name is required', 'error');
+                    statusDiv.textContent = 'Error: S3 bucket name is required';
+                    statusDiv.className = 'status error';
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                // Test S3 connection
+                const s3Response = await fetch('/api/test-s3-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName
+                    })
+                });
+                
+                const s3Data = await s3Response.json();
+                
+                if (s3Data.logs) {
+                    processServerLogs(s3Data.logs);
+                }
+                
+                if (!s3Data.success) {
+                    statusDiv.textContent = 'Error: S3 connection failed: ' + s3Data.error;
+                    statusDiv.className = 'status error';
+                    logMessage('S3 connection failed: ' + s3Data.error, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                logMessage('S3 connection successful!', 'info');
+                
+                // Now test Weaviate connection
+                logMessage('Testing Weaviate connection...');
+                const weaviateUrl = document.getElementById('weaviateUrl').value;
+                const weaviateToken = document.getElementById('weaviateToken').value;
+                
+                const weaviateResponse = await fetch('/api/test-weaviate-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
+                });
+                
+                const weaviateData = await weaviateResponse.json();
+                
+                if (weaviateData.logs) {
+                    processServerLogs(weaviateData.logs);
+                }
+                
+                if (!weaviateData.success) {
+                    statusDiv.textContent = 'Error: Weaviate connection failed: ' + weaviateData.error;
+                    statusDiv.className = 'status error';
+                    logMessage('Weaviate connection failed: ' + weaviateData.error, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                logMessage('Weaviate connection successful!', 'info');
+                logMessage('Both connections successful, saving settings...', 'info');
+                
+                // Now save the settings
                 const response = await fetch('/api/update-settings', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        s3_endpoint: document.getElementById('s3Endpoint').value,
-                        aws_access_key_id: document.getElementById('s3AccessKey').value,
-                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
-                        s3_bucket_name: document.getElementById('s3BucketName').value,
-                        weaviate_url: document.getElementById('weaviateUrl').value,
-                        weaviate_token: document.getElementById('weaviateToken').value
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName,
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    statusDiv.textContent = 'Settings saved successfully!';
+                    statusDiv.textContent = 'Connections tested and settings saved successfully!';
                     statusDiv.className = 'status success';
-                    logMessage('Settings saved successfully!', 'info');
+                    logMessage('Connections tested and settings saved successfully!', 'info');
                 } else {
                     statusDiv.textContent = 'Error: ' + data.error;
                     statusDiv.className = 'status error';
                     logMessage(`Error saving settings: ${data.error}`, 'error');
                 }
             } catch (error) {
-                statusDiv.textContent = 'Error saving settings: ' + error;
+                statusDiv.textContent = 'Error: ' + error;
                 statusDiv.className = 'status error';
-                logMessage(`Error saving settings: ${error}`, 'error');
+                logMessage(`Error during connection testing or saving: ${error}`, 'error');
             }
             
             button.disabled = false;
@@ -975,125 +1047,6 @@
         
         // Log initial app load
         logMessage('Application loaded successfully');
-        
-        // Test S3 Connection functionality
-        document.getElementById('testS3Button').addEventListener('click', async function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Testing...';
-            
-            const statusDiv = document.getElementById('s3ConnectionStatus');
-            statusDiv.textContent = 'Testing S3 connection...';
-            statusDiv.className = 'test-connection-status info';
-            
-            logMessage('Testing S3 connection...');
-            
-            try {
-                const s3Endpoint = document.getElementById('s3Endpoint').value;
-                const s3AccessKey = document.getElementById('s3AccessKey').value;
-                const s3SecretKey = document.getElementById('s3SecretKey').value;
-                const s3BucketName = document.getElementById('s3BucketName').value;
-                
-                if (!s3BucketName) {
-                    statusDiv.textContent = 'Error: Bucket name is required';
-                    statusDiv.className = 'test-connection-status error';
-                    logMessage('Error: Bucket name is required', 'error');
-                    button.disabled = false;
-                    button.textContent = 'Test S3 Connection';
-                    return;
-                }
-                
-                const response = await fetch('/api/test-s3-connection', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        s3_endpoint: s3Endpoint,
-                        aws_access_key_id: s3AccessKey,
-                        aws_secret_access_key: s3SecretKey,
-                        s3_bucket_name: s3BucketName
-                    })
-                });
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message;
-                    statusDiv.className = 'test-connection-status success';
-                    logMessage('S3 connection test successful!', 'info');
-                } else {
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    statusDiv.className = 'test-connection-status error';
-                    logMessage('S3 connection test failed: ' + data.error, 'error');
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error testing connection: ' + error;
-                statusDiv.className = 'test-connection-status error';
-                logMessage('Error testing S3 connection: ' + error, 'error');
-            }
-            
-            button.disabled = false;
-            button.textContent = 'Test S3 Connection';
-        });
-        
-        // Test Weaviate Connection functionality
-        document.getElementById('testWeaviateButton').addEventListener('click', async function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Testing...';
-            
-            const statusDiv = document.getElementById('weaviateConnectionStatus');
-            statusDiv.textContent = 'Testing Weaviate connection...';
-            statusDiv.className = 'test-connection-status info';
-            
-            logMessage('Testing Weaviate connection...');
-            
-            try {
-                const weaviateUrl = document.getElementById('weaviateUrl').value;
-                const weaviateToken = document.getElementById('weaviateToken').value;
-                
-                const response = await fetch('/api/test-weaviate-connection', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        weaviate_url: weaviateUrl,
-                        weaviate_token: weaviateToken
-                    })
-                });
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message;
-                    statusDiv.className = 'test-connection-status success';
-                    logMessage('Weaviate connection test successful!', 'info');
-                } else {
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    statusDiv.className = 'test-connection-status error';
-                    logMessage('Weaviate connection test failed: ' + data.error, 'error');
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error testing connection: ' + error;
-                statusDiv.className = 'test-connection-status error';
-                logMessage('Error testing Weaviate connection: ' + error, 'error');
-            }
-            
-            button.disabled = false;
-            button.textContent = 'Test Weaviate Connection';
-        });
     </script>
 </body>
 </html>

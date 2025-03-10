@@ -138,24 +138,38 @@ def initialize_weaviate_collection(client, collection_name="MercedesImageEmbeddi
     
     try:
         # Check if collection exists
+        logger.info(f"Checking if collection '{collection_name}' exists...")
         if client.collections.exists(collection_name):
-            logger.info(f"Collection {collection_name} already exists")
+            logger.info(f"Collection '{collection_name}' already exists")
             return client.collections.get(collection_name)
         
         # Create collection
-        client.collections.create(
-            name=collection_name,
-            properties=[
-                Property(name="s3_key", data_type=DataType.TEXT),
-                Property(name="text", data_type=DataType.TEXT),
-            ],
-            vectorizer_config=wc.Configure.Vectorizer.none(),
-        )
+        logger.info(f"Creating new collection '{collection_name}'...")
         
-        logger.info(f"Created collection {collection_name}")
-        return client.collections.get(collection_name)
+        try:
+            client.collections.create(
+                name=collection_name,
+                properties=[
+                    Property(name="s3_key", data_type=DataType.TEXT),
+                    Property(name="text", data_type=DataType.TEXT),
+                ],
+                vectorizer_config=wc.Configure.Vectorizer.none(),
+            )
+            
+            logger.info(f"Successfully created collection '{collection_name}'")
+            return client.collections.get(collection_name)
+        except Exception as create_err:
+            logger.error(f"Failed to create collection: {str(create_err)}")
+            # Try to provide more specific error details
+            if "already exists" in str(create_err).lower():
+                logger.info("Collection appears to exist despite check failing. Trying to get it again...")
+                return client.collections.get(collection_name)
+            raise create_err
     except Exception as e:
         logger.error(f"Error initializing Weaviate collection: {str(e)}")
+        # Add more detailed error information
+        import traceback
+        logger.error(f"Detailed error: {traceback.format_exc()}")
         return None
 
 # S3 client function
@@ -253,24 +267,27 @@ def get_text_embedding(text):
 
 # Store embedding in Weaviate collection without using image
 def store_text_embedding_in_weaviate(collection, s3_key, text):
-    """Store text embedding in Weaviate collection"""
+    """Store a text embedding in Weaviate collection"""
     try:
-        logger.info(f"Generating embedding for s3_key: {s3_key}")
-        # Generate a text embedding
+        # Generate text embedding
+        logger.info(f"Generating embedding for text: {text[:50]}...")
         embedding = get_text_embedding(text)
         
-        logger.info(f"Storing embedding in Weaviate collection: {collection.name}")
-        collection.data.insert(
-            properties={
-                "s3_key": s3_key,
-                "text": text
-            },
-            vector=embedding.tolist()
-        )
-        logger.info(f"Successfully stored embedding for {s3_key}")
+        # Log the embedding process with detailed information
+        logger.info(f"Created embedding vector for '{s3_key}' with shape: {embedding.shape}")
+        logger.info(f"Vector stats - min: {embedding.min():.4f}, max: {embedding.max():.4f}, mean: {embedding.mean():.4f}")
+        
+        # Store in Weaviate
+        collection.data.insert({
+            "s3_key": s3_key,
+            "text": text,
+            "vector": embedding.tolist()
+        })
+        
+        logger.info(f"Successfully stored embedding for {s3_key} in Weaviate")
         return True
     except Exception as e:
-        logger.error(f"Error storing text embedding in Weaviate: {str(e)}")
+        logger.error(f"Error storing text embedding: {str(e)}")
         return False
 
 @app.route('/')
@@ -1175,10 +1192,13 @@ def perform_embedding(collection, json_data):
                 s3_key = item.get('s3_key', '')
                 text = item.get('text', '')
                 
-                # Store the text embedding
+                # Log start of vector creation
+                vector_progress = f"[{i+1}/{len(json_data)}] Processing: '{s3_key}' - '{text[:30]}...' "
+                logger.info(vector_progress)
+                
+                # Store the text embedding in Weaviate
                 success = store_text_embedding_in_weaviate(collection, s3_key, text)
                 
-                # Update progress only if successful
                 if success:
                     embedding_status['completed'] += 1
                     logger.info(f"Embedded {embedding_status['completed']} of {embedding_status['total']}")
@@ -1505,7 +1525,7 @@ def load_training_data():
         s3_endpoint = data.get('s3_endpoint')
         aws_access_key_id = data.get('aws_access_key_id')
         aws_secret_access_key = data.get('aws_secret_access_key')
-        bucket_name = data.get('s3_bucket_name') or os.getenv('S3_BUCKET_NAME', 'default-bucket')
+        bucket_name = data.get('s3_bucket_name') or os.getenv('S3_BUCKET_NAME', 'poc-mercedes-gp')  # Default to poc-mercedes-gp
         file_path = data.get('file_path', 'training/training.json')  # Default path to training.json
         weaviate_url = data.get('weaviate_url')
         weaviate_token = data.get('weaviate_token')
@@ -1566,16 +1586,25 @@ def load_training_data():
                         logs.append(f"Skipping entry {i+1}: Missing s3_key or text")
                         continue
                     
+                    # Log start of vector creation
+                    vector_progress = f"[{i+1}/{len(training_data)}] Processing: '{s3_key}' - '{text[:30]}...' "
+                    logs.append(vector_progress)
+                    logger.info(vector_progress)
+                    
                     # Store the text embedding in Weaviate
                     success = store_text_embedding_in_weaviate(collection, s3_key, text)
                     
                     if success:
                         successful_entries += 1
+                        logs.append(f"✓ Successfully created vector #{i+1} for '{s3_key}'")
+                    else:
+                        logs.append(f"✗ Failed to create vector #{i+1} for '{s3_key}'")
                     
-                    # Log progress for every 10 entries
+                    # Log progress for every 10 entries or specified intervals
                     if (i+1) % 10 == 0 or i == 0 or i == len(training_data) - 1:
-                        logger.info(f"Processed {i+1} of {len(training_data)} entries")
-                        logs.append(f"Processed {i+1} of {len(training_data)} entries")
+                        summary = f"Progress: {i+1}/{len(training_data)} entries processed ({(i+1)/len(training_data)*100:.1f}%)"
+                        logger.info(summary)
+                        logs.append(summary)
                 except Exception as e:
                     error_msg = f"Error processing entry {i+1}: {str(e)}"
                     logger.error(error_msg)
