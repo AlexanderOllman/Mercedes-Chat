@@ -226,12 +226,30 @@ def store_embedding_in_weaviate(collection, s3_key, text, embedding):
 
 # Store only the text embedding (we'll add this for text embedding)
 def get_text_embedding(text):
-    """Generate a basic text embedding using random values for demonstration purposes.
-    In a production app, you would use a proper text embedding model."""
-    # For this demo, we're using random embeddings
-    # In a real app, use a text embedding model
-    logger.info(f"Generating text embedding for: {text[:50]}...")
-    return np.random.random(128).astype('float32')  # Small dimension for demo purposes
+    """Generate a text embedding for the given text.
+    We use a consistent approach based on word presence and position to create embeddings
+    that will be useful for finding similar text descriptions."""
+    # Create a fixed-size embedding (size needs to be consistent for vector search)
+    embedding_size = 128  # Keep the same size as before
+    embedding = np.zeros(embedding_size, dtype='float32')
+    
+    # Process the text - convert to lowercase and split into words
+    words = text.lower().split()
+    
+    # Create embedding based on word presence and position
+    for i, word in enumerate(words):
+        # Simple hashing function to map words to positions in the embedding
+        hash_val = hash(word) % embedding_size
+        # Add value at the hashed position, with diminishing weight for later words
+        embedding[hash_val] += 1.0 / (1 + i * 0.1)
+    
+    # Normalize the embedding to unit length (important for vector similarity)
+    norm = np.linalg.norm(embedding)
+    if norm > 0:
+        embedding = embedding / norm
+    
+    logger.info(f"Generated text embedding for: {text[:50]}...")
+    return embedding
 
 # Store embedding in Weaviate collection without using image
 def store_text_embedding_in_weaviate(collection, s3_key, text):
@@ -308,10 +326,10 @@ def chat():
         query_embedding = get_text_embedding(query)
         
         logger.info("Searching Weaviate for similar items")
-        # Search Weaviate for similar items
+        # Search Weaviate for similar items - get 10 results as requested
         results = collection.query.near_vector(
             near_vector=query_embedding.tolist(),
-            limit=5
+            limit=10  # Updated to 10 results from the previous 5
         ).do()
         
         logger.info(f"Connecting to S3 at: {s3_endpoint or 'default endpoint'}")
@@ -1474,6 +1492,124 @@ def save_settings():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@app.route('/api/load-training-data', methods=['POST'])
+def load_training_data():
+    """
+    Endpoint to download training.json from S3 and process its entries into Weaviate.
+    """
+    try:
+        # Get credentials from request
+        data = request.json
+        s3_endpoint = data.get('s3_endpoint')
+        aws_access_key_id = data.get('aws_access_key_id')
+        aws_secret_access_key = data.get('aws_secret_access_key')
+        bucket_name = data.get('s3_bucket_name') or os.getenv('S3_BUCKET_NAME', 'default-bucket')
+        file_path = data.get('file_path', 'training/training.json')  # Default path to training.json
+        weaviate_url = data.get('weaviate_url')
+        weaviate_token = data.get('weaviate_token')
+        
+        # Log the request
+        logger.info(f"Loading training data from S3: {bucket_name}/{file_path}")
+        logs = [f"Loading training data from S3: {bucket_name}/{file_path}"]
+        
+        # Create S3 client
+        s3_client = get_s3_client(s3_endpoint, aws_access_key_id, aws_secret_access_key)
+        
+        # Connect to Weaviate
+        weaviate_client = connect_to_weaviate(weaviate_url, weaviate_token)
+        if not weaviate_client:
+            error_msg = "Failed to connect to Weaviate"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Get the collection
+        collection = initialize_weaviate_collection(weaviate_client)
+        if not collection:
+            error_msg = "Failed to initialize Weaviate collection"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+        
+        # Get the training data file from S3
+        try:
+            logger.info(f"Downloading training data from S3: {bucket_name}/{file_path}")
+            logs.append(f"Downloading training data from S3: {bucket_name}/{file_path}")
+            
+            response = s3_client.get_object(Bucket=bucket_name, Key=file_path)
+            content = response['Body'].read().decode('utf-8')
+            training_data = json.loads(content)
+            
+            logger.info(f"Downloaded training data with {len(training_data)} entries")
+            logs.append(f"Downloaded training data with {len(training_data)} entries")
+            
+            # Process the training data
+            successful_entries = 0
+            
+            for i, item in enumerate(training_data):
+                try:
+                    # Extract data from the JSON item
+                    s3_key = item.get('s3_key', '')
+                    text = item.get('text', '')
+                    
+                    if not s3_key or not text:
+                        logs.append(f"Skipping entry {i+1}: Missing s3_key or text")
+                        continue
+                    
+                    # Store the text embedding in Weaviate
+                    success = store_text_embedding_in_weaviate(collection, s3_key, text)
+                    
+                    if success:
+                        successful_entries += 1
+                    
+                    # Log progress for every 10 entries
+                    if (i+1) % 10 == 0 or i == 0 or i == len(training_data) - 1:
+                        logger.info(f"Processed {i+1} of {len(training_data)} entries")
+                        logs.append(f"Processed {i+1} of {len(training_data)} entries")
+                except Exception as e:
+                    error_msg = f"Error processing entry {i+1}: {str(e)}"
+                    logger.error(error_msg)
+                    logs.append(error_msg)
+            
+            # Return success response
+            logger.info(f"Successfully processed {successful_entries} of {len(training_data)} entries")
+            logs.append(f"Successfully processed {successful_entries} of {len(training_data)} entries")
+            
+            return jsonify({
+                'success': True,
+                'message': f"Successfully processed {successful_entries} of {len(training_data)} entries",
+                'total_entries': len(training_data),
+                'successful_entries': successful_entries,
+                'logs': logs
+            })
+            
+        except Exception as e:
+            error_msg = f"Error downloading or processing training data: {str(e)}"
+            logger.error(error_msg)
+            logs.append(error_msg)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'logs': logs
+            }), 400
+            
+    except Exception as e:
+        error_msg = f"Error in load_training_data endpoint: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'logs': [error_msg]
         }), 500
 
 if __name__ == '__main__':

@@ -437,6 +437,15 @@
                         <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
                         <button id="embedButton" class="embed-button">Embed Text Data</button>
                         <div id="embedStatus" class="status" style="display: none;"></div>
+                        
+                        <h4>Load Training Data</h4>
+                        <p>Load and process training.json from S3 into Weaviate</p>
+                        <div>
+                            <label for="trainingFilePath">Training File Path:</label>
+                            <input type="text" id="trainingFilePath" placeholder="training/training.json" value="training/training.json">
+                        </div>
+                        <button id="loadTrainingButton" class="embed-button">Load Training Data</button>
+                        <div id="trainingStatus" class="status" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -712,6 +721,66 @@
             
             button.disabled = false;
             button.textContent = 'Embed Text Data';
+        });
+        
+        // Load Training Data functionality
+        document.getElementById('loadTrainingButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Loading...';
+            const statusDiv = document.getElementById('trainingStatus');
+            statusDiv.textContent = 'Loading and processing training data...';
+            statusDiv.className = 'status info';
+            statusDiv.style.display = 'block';
+            
+            logMessage('Starting training data load process...');
+            
+            try {
+                const filePath = document.getElementById('trainingFilePath').value;
+                logMessage(`Loading training data from: ${filePath}`);
+                
+                const response = await fetch('/api/load-training-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        s3_endpoint: document.getElementById('s3Endpoint').value,
+                        aws_access_key_id: document.getElementById('s3AccessKey').value,
+                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
+                        s3_bucket_name: document.getElementById('s3BucketName').value,
+                        weaviate_url: document.getElementById('weaviateUrl').value,
+                        weaviate_token: document.getElementById('weaviateToken').value
+                    })
+                });
+                
+                logMessage('Received training data load response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                if (data.success) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status success';
+                    logMessage(`Training data load completed: ${data.message}`, 'info');
+                } else {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Training data load error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error loading training data: ' + error;
+                statusDiv.className = 'status error';
+                logMessage(`Training data load error: ${error}`, 'error');
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Load Training Data';
         });
         
         // Refresh button functionality
