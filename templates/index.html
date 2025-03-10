@@ -3,1050 +3,1084 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mercedes Image Chatbot</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Mercedes Data Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            padding-top: 20px;
+            background-color: #f8f9fa;
         }
-        
-        .container {
-            display: flex;
-            gap: 20px;
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            border-bottom: 3px solid #00548c;
         }
-        
-        .main-content {
-            flex: 3;
+        .connection-panel {
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
-        
-        .settings-panel {
-            flex: 1;
-            padding: 20px;
+        .file-explorer {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: white;
+            height: 500px;
+            overflow: auto;
+        }
+        .file-explorer .folder {
+            cursor: pointer;
+            color: #00548c;
+        }
+        .file-explorer .file {
+            color: #333;
+        }
+        .file-explorer .table td, .file-explorer .table th {
+            vertical-align: middle;
+        }
+        .breadcrumb-item a {
+            color: #00548c;
+            text-decoration: none;
+        }
+        .breadcrumb-item.active {
+            color: #495057;
+        }
+        .btn-primary {
+            background-color: #00548c;
+            border-color: #00548c;
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: #003e69;
+            border-color: #003e69;
+        }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 350px;
+        }
+        .weaviate-collection {
+            cursor: pointer;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
             background-color: #f5f5f5;
-            border-radius: 8px;
         }
-        
-        .chat-input {
-            width: 100%;
-            padding: 15px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-bottom: 15px;
+        .weaviate-collection:hover {
+            background-color: #e9ecef;
         }
-        
-        .search-button {
-            background-color: #00548c;
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .search-button:hover {
-            background-color: #003362;
-        }
-        
-        .results-area {
-            margin-top: 30px;
-        }
-        
-        .carousel {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            gap: 20px;
-            padding: 20px 0;
-        }
-        
-        .carousel-item {
-            flex: 0 0 auto;
-            width: 300px;
-            scroll-snap-align: start;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .carousel-item img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            display: block;
-        }
-        
-        .carousel-caption {
-            padding: 15px;
-            background: white;
-        }
-        
-        .btn-refresh {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            width: 100%;
-            margin-bottom: 15px;
-        }
-        
-        .btn-refresh:hover {
-            background-color: #45a049;
-        }
-        
-        .btn-refresh:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        
-        .status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .status.success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .status.info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        
-        .settings-title {
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .save-settings {
-            background-color: #00548c;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-        
-        .save-settings:hover {
-            background-color: #003362;
-        }
-        
-        .loading {
-            display: none;
-            margin: 20px auto;
-            text-align: center;
-        }
-        
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 40px;
-            height: 40px;
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00548c;
             border-radius: 50%;
-            border-left-color: #00548c;
-            animation: spin 1s ease infinite;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
             display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        /* Add styling for the embedding section */
-        #datasetInput {
-            width: 100%;
-            margin-bottom: 10px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .embed-button {
-            background-color: #324ea8;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        
-        .embed-button:hover {
-            background-color: #263b94;
-        }
-        
-        .embed-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        
-        /* Styles for the log container */
-        .log-container {
-            margin-top: 30px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #f8f9fa;
-        }
-        
-        .log-output {
-            height: 200px;
-            overflow-y: auto;
-            background-color: #252525;
-            color: #f0f0f0;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            margin: 0;
-        }
-        
-        .log-controls {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 5px;
-        }
-        
-        .clear-log-button {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        
-        .clear-log-button:hover {
-            background-color: #5a6268;
-        }
-        
-        .log-entry {
-            margin: 2px 0;
-            padding: 2px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .log-time {
-            color: #888;
-            margin-right: 5px;
-        }
-        
-        .log-info {
-            color: #4caf50;
-        }
-        
-        .log-warning {
-            color: #ff9800;
-        }
-        
-        .log-error {
-            color: #f44336;
-        }
-        
-        /* Styles for the test connection buttons */
-        .test-connection-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-            margin-bottom: 15px;
-            gap: 10px;
-        }
-        
-        .test-connection-button {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            flex: 1;
-        }
-        
-        .test-connection-button:hover {
-            background-color: #5a6268;
-        }
-        
-        .test-connection-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .test-connection-status {
-            display: none;
-            margin-top: 5px;
-            padding: 5px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        
-        .test-connection-status.success {
-            display: block;
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .test-connection-status.error {
-            display: block;
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .test-connection-status.info {
-            display: block;
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <div class="w-64 bg-gray-800 text-white">
-            <div class="p-4">
-                <h1 class="text-xl font-bold">Mercedes Chat</h1>
+<body>
+    <div class="container">
+        <header class="mb-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <h1 class="mb-0">Mercedes Data Management</h1>
             </div>
-            <nav class="mt-6">
-                <a href="/" class="flex items-center px-4 py-3 hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    <span>Home</span>
-                </a>
-                <a href="/settings" class="flex items-center px-4 py-3 hover:bg-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>Settings</span>
-                </a>
-            </nav>
-        </div>
+        </header>
 
-        <!-- Main Content -->
-        <div class="flex-1 overflow-auto">
-            <div class="container p-6">
-                <h1>Mercedes Image Chatbot - push three!!!!</h1>
-                
-                <div class="container">
-                    <div class="main-content">
-                        <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
-                        <button id="searchButton" class="search-button">Search</button>
-                        
-                        <div class="loading" id="loadingIndicator">
-                            <div class="spinner"></div>
-                            <p>Searching for images...</p>
+        <!-- Alert container for notifications -->
+        <div class="alert-container" id="alertContainer"></div>
+
+        <!-- Main Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="s3-tab" data-bs-toggle="tab" data-bs-target="#s3-content" type="button">
+                    <i class="bi bi-hdd-rack"></i> S3 Storage
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="weaviate-tab" data-bs-toggle="tab" data-bs-target="#weaviate-content" type="button">
+                    <i class="bi bi-diagram-3"></i> Weaviate
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="mainTabsContent">
+            <!-- S3 Tab Content -->
+            <div class="tab-pane fade show active" id="s3-content" role="tabpanel" aria-labelledby="s3-tab">
+                <!-- S3 Connection Panel -->
+                <div class="connection-panel">
+                    <h4><i class="bi bi-hdd-rack"></i> S3 Connection</h4>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="s3-endpoint" class="form-label">Endpoint URL</label>
+                            <input type="text" class="form-control" id="s3-endpoint" placeholder="https://s3.amazonaws.com">
                         </div>
-                        
-                        <div class="results-area">
-                            <h2>Results</h2>
-                            <div id="resultsCarousel" class="carousel">
-                                <!-- Results will be dynamically inserted here -->
-                            </div>
+                        <div class="col-md-4">
+                            <label for="s3-access-key" class="form-label">Access Key ID</label>
+                            <input type="text" class="form-control" id="s3-access-key" placeholder="Your access key">
                         </div>
-                        
-                        <div class="log-container">
-                            <h2>Operation Logs</h2>
-                            <div class="log-controls">
-                                <button id="clearLogButton" class="clear-log-button">Clear Logs</button>
-                            </div>
-                            <pre id="logOutput" class="log-output"></pre>
+                        <div class="col-md-4">
+                            <label for="s3-secret-key" class="form-label">Secret Access Key</label>
+                            <input type="password" class="form-control" id="s3-secret-key" placeholder="Your secret key">
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary" id="s3-connect-btn">
+                                <i class="bi bi-link"></i> Test Connection
+                            </button>
+                            <span id="s3-connection-status"></span>
                         </div>
                     </div>
-                    
-                    <div class="settings-panel">
-                        <h3 class="settings-title">Settings</h3>
-                        
-                        <button id="refreshButton" class="btn-refresh">Refresh</button>
-                        
-                        <div id="status" class="status" style="display: none;"></div>
-                        
-                        <h4>S3 Configuration</h4>
+                </div>
+
+                <!-- S3 File Explorer -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-folder"></i> S3 File Explorer</h5>
                         <div>
-                            <label for="s3Endpoint">S3 Endpoint URL:</label>
-                            <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+                            <select class="form-select d-inline-block w-auto" id="s3-bucket-select">
+                                <option value="" selected>Select a bucket</option>
+                            </select>
+                            <button class="btn btn-outline-secondary btn-sm ms-2" id="s3-refresh-btn">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
                         </div>
-                        
-                        <div>
-                            <label for="s3AccessKey">Access Key ID:</label>
-                            <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
+                    </div>
+                    <div class="card-body">
+                        <!-- Breadcrumb navigation -->
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb" id="s3-breadcrumb">
+                                <li class="breadcrumb-item active">Root</li>
+                            </ol>
+                        </nav>
+
+                        <!-- File list -->
+                        <div class="file-explorer">
+                            <div class="text-center py-5" id="s3-placeholder">
+                                <i class="bi bi-hdd-rack fs-1 text-muted"></i>
+                                <p class="mt-3">Select a bucket to view files</p>
+                            </div>
+                            <div id="s3-loader" class="text-center py-5 d-none">
+                                <div class="loader"></div>
+                                <p>Loading files...</p>
+                            </div>
+                            <table class="table table-hover d-none" id="s3-file-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50%">Name</th>
+                                        <th width="20%">Size</th>
+                                        <th width="30%">Last Modified</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="s3-file-list">
+                                    <!-- Files will be listed here -->
+                                </tbody>
+                            </table>
                         </div>
-                        
-                        <div>
-                            <label for="s3SecretKey">Secret Access Key:</label>
-                            <input type="password" id="s3SecretKey" placeholder="Enter secret key">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weaviate Tab Content -->
+            <div class="tab-pane fade" id="weaviate-content" role="tabpanel" aria-labelledby="weaviate-tab">
+                <!-- Weaviate Connection Panel -->
+                <div class="connection-panel">
+                    <h4><i class="bi bi-diagram-3"></i> Weaviate Connection</h4>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="weaviate-url" class="form-label">Weaviate URL</label>
+                            <input type="text" class="form-control" id="weaviate-url" placeholder="https://weaviate-instance.com">
                         </div>
-                        
-                        <div>
-                            <label for="s3BucketName">Bucket Name:</label>
-                            <input type="text" id="s3BucketName" placeholder="my-bucket" value="poc-mercedes-gp">
+                        <div class="col-md-6">
+                            <label for="weaviate-token" class="form-label">API Token (Optional)</label>
+                            <input type="password" class="form-control" id="weaviate-token" placeholder="Your token">
                         </div>
-                        
-                        <h4>Weaviate Configuration</h4>
-                        <div>
-                            <label for="weaviateUrl">Weaviate URL:</label>
-                            <input type="text" id="weaviateUrl" placeholder="weaviate.poc-weaviate.svc.cluster.local">
+                        <div class="col-12">
+                            <button class="btn btn-primary" id="weaviate-connect-btn">
+                                <i class="bi bi-link"></i> Test Connection
+                            </button>
+                            <span id="weaviate-connection-status"></span>
                         </div>
-                        
-                        <div>
-                            <label for="weaviateToken">Weaviate Token:</label>
-                            <input type="password" id="weaviateToken" placeholder="Enter auth token">
+                    </div>
+                </div>
+
+                <!-- Weaviate Collection Management -->
+                <div class="row">
+                    <!-- Collections List -->
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Collections</h5>
+                                <button class="btn btn-outline-primary btn-sm" id="refresh-collections-btn">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="weaviate-loader" class="text-center py-5 d-none">
+                                    <div class="loader"></div>
+                                    <p>Loading collections...</p>
+                                </div>
+                                <div id="weaviate-collections-placeholder" class="text-center py-5">
+                                    <i class="bi bi-diagram-3 fs-1 text-muted"></i>
+                                    <p class="mt-3">Connect to Weaviate to view collections</p>
+                                </div>
+                                <div id="weaviate-collections-list" class="d-none">
+                                    <!-- Collections will be listed here -->
+                                </div>
+                                <div class="mt-3">
+                                    <button class="btn btn-success w-100" id="create-collection-btn">
+                                        <i class="bi bi-plus-circle"></i> Create New Collection
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <button id="saveSettingsButton" class="save-settings">Save Settings</button>
-                        
-                        <h4>Embedding</h4>
-                        <p>Process and embed text descriptions into Weaviate (no image processing)</p>
-                        <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
-                        <button id="embedButton" class="embed-button">Embed Text Data</button>
-                        <div id="embedStatus" class="status" style="display: none;"></div>
-                        
-                        <h4>Load Training Data</h4>
-                        <p>Load and process training.json from S3 into Weaviate</p>
-                        <div>
-                            <label for="trainingFilePath">Training File Path:</label>
-                            <input type="text" id="trainingFilePath" placeholder="training/training.json" value="training/training.json">
+                    </div>
+
+                    <!-- Collection Details & Objects -->
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><span id="collection-detail-name">Collection Details</span></h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="collection-detail-placeholder" class="text-center py-5">
+                                    <i class="bi bi-info-circle fs-1 text-muted"></i>
+                                    <p class="mt-3">Select a collection to view details</p>
+                                </div>
+                                <div id="collection-detail-content" class="d-none">
+                                    <div class="row mb-4">
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                                <strong>Description:</strong>
+                                                <p id="collection-description" class="mb-0">-</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <strong>Properties:</strong>
+                                                <ul id="collection-properties"></ul>
+                                            </div>
+                                            <div class="d-flex">
+                                                <div class="me-4">
+                                                    <strong>Object Count:</strong>
+                                                    <span id="collection-object-count">-</span>
+                                                </div>
+                                                <div>
+                                                    <strong>Vector Index:</strong>
+                                                    <span id="collection-vector-index">-</span>
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div class="d-flex justify-content-end">
+                                                <button class="btn btn-danger" id="delete-collection-btn">
+                                                    <i class="bi bi-trash"></i> Delete Collection
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Collection Objects Table -->
+                                    <h5>Objects <button class="btn btn-sm btn-outline-secondary ms-2" id="refresh-objects-btn"><i class="bi bi-arrow-clockwise"></i></button></h5>
+                                    <div id="objects-loader" class="text-center py-3 d-none">
+                                        <div class="loader"></div>
+                                        <p>Loading objects...</p>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover" id="collection-objects-table">
+                                            <thead>
+                                                <tr>
+                                                    <th width="30%">ID</th>
+                                                    <th width="70%">Properties</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="collection-objects-list">
+                                                <!-- Objects will be listed here -->
+                                            </tbody>
+                                        </table>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <div>
+                                                <span id="objects-pagination-info">Showing 0 objects</span>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary me-2" id="prev-objects-page" disabled>
+                                                    <i class="bi bi-chevron-left"></i> Previous
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary" id="next-objects-page" disabled>
+                                                    Next <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button id="loadTrainingButton" class="embed-button">Load Training Data</button>
-                        <div id="trainingStatus" class="status" style="display: none;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Create Collection Modal -->
+    <div class="modal fade" id="createCollectionModal" tabindex="-1" aria-labelledby="createCollectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createCollectionModalLabel">Create New Collection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-collection-form">
+                        <div class="mb-3">
+                            <label for="collection-name" class="form-label">Collection Name</label>
+                            <input type="text" class="form-control" id="collection-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="collection-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="collection-description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Vector Index Type</label>
+                            <select class="form-select" id="vector-index-type">
+                                <option value="cosine">Cosine (Default)</option>
+                                <option value="dot">Dot Product</option>
+                                <option value="l2-squared">L2 Squared (Euclidean)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Properties</label>
+                            <div id="properties-container">
+                                <!-- Initial property row -->
+                                <div class="property-row d-flex mb-2">
+                                    <input type="text" class="form-control me-2" placeholder="Property name">
+                                    <select class="form-select me-2">
+                                        <option value="text">Text</option>
+                                        <option value="int">Integer</option>
+                                        <option value="number">Number</option>
+                                        <option value="boolean">Boolean</option>
+                                        <option value="date">Date</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-danger remove-property-btn">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-property-btn">
+                                <i class="bi bi-plus"></i> Add Property
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submit-create-collection">Create Collection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Collection Confirmation Modal -->
+    <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-labelledby="deleteCollectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteCollectionModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the collection <strong id="delete-collection-name"></strong>?</p>
+                    <p class="text-danger">This action cannot be undone. All data in this collection will be permanently deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-collection">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript and Bootstrap dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script>
-        // Logging functionality
-        const logOutput = document.getElementById('logOutput');
-        
-        function logMessage(message, type = 'info') {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            
-            const timeSpan = document.createElement('span');
-            timeSpan.className = 'log-time';
-            timeSpan.textContent = `[${timeString}]`;
-            
-            const messageSpan = document.createElement('span');
-            messageSpan.className = `log-${type}`;
-            messageSpan.textContent = ` ${message}`;
-            
-            logEntry.appendChild(timeSpan);
-            logEntry.appendChild(messageSpan);
-            
-            logOutput.appendChild(logEntry);
-            logOutput.scrollTop = logOutput.scrollHeight;
-        }
-        
-        // Clear logs functionality
-        document.getElementById('clearLogButton').addEventListener('click', function() {
-            logOutput.innerHTML = '';
-            logMessage('Logs cleared');
+        // Global variables
+        let currentS3Bucket = '';
+        let currentS3Prefix = '';
+        let currentCollection = '';
+        let objectsPage = {
+            offset: 0,
+            limit: 20,
+            totalCount: 0
+        };
+
+        // Document ready function
+        $(document).ready(function() {
+            // Initialize event listeners
+            initS3EventListeners();
+            initWeaviateEventListeners();
+            initModals();
         });
-        
-        // Display results in carousel
-        function displayResults(results) {
-            const carousel = document.getElementById('resultsCarousel');
-            carousel.innerHTML = '';
+
+        // Show a notification
+        function showNotification(message, type = 'info') {
+            const alertId = 'alert-' + Date.now();
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            $('#alertContainer').append(alertHtml);
             
-            if (results.length === 0) {
-                carousel.innerHTML = '<p>No results found</p>';
-                logMessage('No results found', 'warning');
-                return;
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                $(`#${alertId}`).alert('close');
+            }, 5000);
+        }
+
+        // Format file size for display
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Format object properties for display
+        function formatProperties(properties) {
+            if (!properties || Object.keys(properties).length === 0) {
+                return '<em>No properties</em>';
             }
             
-            results.forEach((result, index) => {
-                const item = document.createElement('div');
-                item.className = 'carousel-item';
-                
-                const img = document.createElement('img');
-                img.src = result.image;
-                img.alt = result.text;
-                
-                const caption = document.createElement('div');
-                caption.className = 'carousel-caption';
-                caption.textContent = result.text;
-                
-                item.appendChild(img);
-                item.appendChild(caption);
-                carousel.appendChild(item);
-                
-                logMessage(`Result ${index+1}: s3_key=${result.s3_key}, text="${result.text}"`);
-            });
-        }
-        
-        // Process server logs
-        function processServerLogs(logs) {
-            if (!logs || !Array.isArray(logs)) return;
-            
-            logs.forEach(log => {
-                // Determine log type based on content
-                let type = 'info';
-                if (log.includes('Error') || log.includes('Failed') || log.includes('error')) {
-                    type = 'error';
-                } else if (log.includes('Warning') || log.includes('warning')) {
-                    type = 'warning';
-                }
-                
-                logMessage(`[Server] ${log}`, type);
-            });
-        }
-        
-        // Search functionality
-        document.getElementById('searchButton').addEventListener('click', async function() {
-            const query = document.getElementById('queryInput').value.trim();
-            if (!query) return;
-            
-            logMessage(`Starting search for: "${query}"`);
-            
-            // Show loading indicator
-            document.getElementById('loadingIndicator').style.display = 'block';
-            document.getElementById('resultsCarousel').innerHTML = '';
-            
-            try {
-                logMessage('Sending request to server...');
-                
-                const s3Endpoint = document.getElementById('s3Endpoint').value;
-                const s3AccessKey = document.getElementById('s3AccessKey').value;
-                const s3SecretKey = document.getElementById('s3SecretKey').value;
-                const s3BucketName = document.getElementById('s3BucketName').value;
-                const weaviateUrl = document.getElementById('weaviateUrl').value;
-                const weaviateToken = document.getElementById('weaviateToken').value;
-                
-                logMessage(`Using S3 endpoint: ${s3Endpoint || 'default'}`);
-                logMessage(`Using S3 bucket: ${s3BucketName || 'default'}`);
-                logMessage(`Using Weaviate URL: ${weaviateUrl || 'default'}`);
-                
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        query: query,
-                        s3_endpoint: s3Endpoint,
-                        aws_access_key_id: s3AccessKey,
-                        aws_secret_access_key: s3SecretKey,
-                        s3_bucket_name: s3BucketName,
-                        weaviate_url: weaviateUrl,
-                        weaviate_token: weaviateToken
-                    })
-                });
-                
-                logMessage('Received response from server');
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
-                }
-                
-                // Hide loading indicator
-                document.getElementById('loadingIndicator').style.display = 'none';
-                
-                if (data.success) {
-                    logMessage(`Found ${data.results.length} results`);
-                    displayResults(data.results);
-                } else {
-                    logMessage(`Error: ${data.error}`, 'error');
-                    alert('Error: ' + data.error);
-                }
-            } catch (error) {
-                document.getElementById('loadingIndicator').style.display = 'none';
-                logMessage(`Error performing search: ${error}`, 'error');
-                alert('Error performing search: ' + error);
-            }
-        });
-        
-        // Settings functionality
-        document.getElementById('saveSettingsButton').addEventListener('click', async function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Saving...';
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = 'Testing connections and saving settings...';
-            statusDiv.className = 'status info';
-            statusDiv.style.display = 'block';
-            
-            logMessage('Testing connections and saving settings...');
-            
-            try {
-                // Test S3 connection first
-                logMessage('Testing S3 connection...');
-                const s3Endpoint = document.getElementById('s3Endpoint').value;
-                const s3AccessKey = document.getElementById('s3AccessKey').value;
-                const s3SecretKey = document.getElementById('s3SecretKey').value;
-                const s3BucketName = document.getElementById('s3BucketName').value;
-                
-                if (!s3BucketName) {
-                    logMessage('Error: S3 bucket name is required', 'error');
-                    statusDiv.textContent = 'Error: S3 bucket name is required';
-                    statusDiv.className = 'status error';
-                    button.disabled = false;
-                    button.textContent = 'Save Settings';
-                    return;
-                }
-                
-                // Test S3 connection
-                const s3Response = await fetch('/api/test-s3-connection', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        s3_endpoint: s3Endpoint,
-                        aws_access_key_id: s3AccessKey,
-                        aws_secret_access_key: s3SecretKey,
-                        s3_bucket_name: s3BucketName
-                    })
-                });
-                
-                const s3Data = await s3Response.json();
-                
-                if (s3Data.logs) {
-                    processServerLogs(s3Data.logs);
-                }
-                
-                if (!s3Data.success) {
-                    statusDiv.textContent = 'Error: S3 connection failed: ' + s3Data.error;
-                    statusDiv.className = 'status error';
-                    logMessage('S3 connection failed: ' + s3Data.error, 'error');
-                    button.disabled = false;
-                    button.textContent = 'Save Settings';
-                    return;
-                }
-                
-                logMessage('S3 connection successful!', 'info');
-                
-                // Now test Weaviate connection
-                logMessage('Testing Weaviate connection...');
-                const weaviateUrl = document.getElementById('weaviateUrl').value;
-                const weaviateToken = document.getElementById('weaviateToken').value;
-                
-                const weaviateResponse = await fetch('/api/test-weaviate-connection', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        weaviate_url: weaviateUrl,
-                        weaviate_token: weaviateToken
-                    })
-                });
-                
-                const weaviateData = await weaviateResponse.json();
-                
-                if (weaviateData.logs) {
-                    processServerLogs(weaviateData.logs);
-                }
-                
-                if (!weaviateData.success) {
-                    statusDiv.textContent = 'Error: Weaviate connection failed: ' + weaviateData.error;
-                    statusDiv.className = 'status error';
-                    logMessage('Weaviate connection failed: ' + weaviateData.error, 'error');
-                    button.disabled = false;
-                    button.textContent = 'Save Settings';
-                    return;
-                }
-                
-                logMessage('Weaviate connection successful!', 'info');
-                logMessage('Both connections successful, saving settings...', 'info');
-                
-                // Now save the settings
-                const response = await fetch('/api/update-settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        s3_endpoint: s3Endpoint,
-                        aws_access_key_id: s3AccessKey,
-                        aws_secret_access_key: s3SecretKey,
-                        s3_bucket_name: s3BucketName,
-                        weaviate_url: weaviateUrl,
-                        weaviate_token: weaviateToken
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    statusDiv.textContent = 'Connections tested and settings saved successfully!';
-                    statusDiv.className = 'status success';
-                    logMessage('Connections tested and settings saved successfully!', 'info');
-                } else {
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    statusDiv.className = 'status error';
-                    logMessage(`Error saving settings: ${data.error}`, 'error');
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error: ' + error;
-                statusDiv.className = 'status error';
-                logMessage(`Error during connection testing or saving: ${error}`, 'error');
-            }
-            
-            button.disabled = false;
-            button.textContent = 'Save Settings';
-        });
-        
-        // Embedding functionality
-        document.getElementById('embedButton').addEventListener('click', async function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Embedding...';
-            const statusDiv = document.getElementById('embedStatus');
-            statusDiv.textContent = 'Processing and embedding text data...';
-            statusDiv.className = 'status info';
-            statusDiv.style.display = 'block';
-            
-            logMessage('Starting embedding process...');
-            
-            try {
-                // Parse the dataset JSON
-                let dataset;
-                try {
-                    const datasetText = document.getElementById('datasetInput').value;
-                    logMessage(`Parsing dataset: ${datasetText.length} characters`);
-                    
-                    dataset = JSON.parse(datasetText);
-                    if (!Array.isArray(dataset)) {
-                        throw new Error('Dataset must be an array');
+            const formatted = Object.entries(properties)
+                .map(([key, value]) => {
+                    // Format the value based on its type
+                    let displayValue = value;
+                    if (typeof value === 'object' && value !== null) {
+                        displayValue = JSON.stringify(value);
+                    } else if (typeof value === 'boolean') {
+                        displayValue = value ? 'true' : 'false';
                     }
                     
-                    logMessage(`Successfully parsed dataset with ${dataset.length} items`);
-                } catch (parseError) {
-                    statusDiv.textContent = 'Error parsing dataset JSON: ' + parseError;
-                    statusDiv.className = 'status error';
-                    logMessage(`Error parsing JSON: ${parseError}`, 'error');
-                    button.disabled = false;
-                    button.textContent = 'Embed Text Data';
-                    return;
-                }
-                
-                logMessage(`Connecting to Weaviate at ${document.getElementById('weaviateUrl').value || 'default URL'}`);
-                
-                const response = await fetch('/api/embed', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        dataset: dataset,
-                        weaviate_url: document.getElementById('weaviateUrl').value,
-                        weaviate_token: document.getElementById('weaviateToken').value
-                    })
-                });
-                
-                logMessage('Received embedding response from server');
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message;
-                    statusDiv.className = 'status success';
-                    logMessage(`Embedding completed: ${data.message}`, 'info');
-                } else {
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    statusDiv.className = 'status error';
-                    logMessage(`Embedding error: ${data.error}`, 'error');
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error embedding data: ' + error;
-                statusDiv.className = 'status error';
-                logMessage(`Embedding error: ${error}`, 'error');
-            }
-            
-            button.disabled = false;
-            button.textContent = 'Embed Text Data';
-        });
-        
-        // Load Training Data functionality
-        document.getElementById('loadTrainingButton').addEventListener('click', async function() {
-            const button = this;
-            button.disabled = true;
-            button.textContent = 'Loading...';
-            const statusDiv = document.getElementById('trainingStatus');
-            statusDiv.textContent = 'Loading and processing training data...';
-            statusDiv.className = 'status info';
-            statusDiv.style.display = 'block';
-            
-            logMessage('Starting training data load process...');
-            
-            try {
-                const filePath = document.getElementById('trainingFilePath').value;
-                logMessage(`Loading training data from: ${filePath}`);
-                
-                const response = await fetch('/api/load-training-data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        file_path: filePath,
-                        s3_endpoint: document.getElementById('s3Endpoint').value,
-                        aws_access_key_id: document.getElementById('s3AccessKey').value,
-                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
-                        s3_bucket_name: document.getElementById('s3BucketName').value,
-                        weaviate_url: document.getElementById('weaviateUrl').value,
-                        weaviate_token: document.getElementById('weaviateToken').value
-                    })
-                });
-                
-                logMessage('Received training data load response from server');
-                
-                const data = await response.json();
-                
-                // Process server logs if available
-                if (data.logs) {
-                    processServerLogs(data.logs);
-                }
-                
-                if (data.success) {
-                    statusDiv.textContent = data.message;
-                    statusDiv.className = 'status success';
-                    logMessage(`Training data load completed: ${data.message}`, 'info');
-                } else {
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    statusDiv.className = 'status error';
-                    logMessage(`Training data load error: ${data.error}`, 'error');
-                }
-            } catch (error) {
-                statusDiv.textContent = 'Error loading training data: ' + error;
-                statusDiv.className = 'status error';
-                logMessage(`Training data load error: ${error}`, 'error');
-            }
-            
-            button.disabled = false;
-            button.textContent = 'Load Training Data';
-        });
-        
-        // Refresh button functionality
-        document.getElementById('refreshButton').addEventListener('click', async function() {
-            try {
-                const button = this;
-                const statusDiv = document.getElementById('status');
-                
-                logMessage('Refreshing application...');
-                
-                // Disable button and show loading state
-                button.disabled = true;
-                button.textContent = 'Pulling changes...';
-                statusDiv.className = 'status info';
-                statusDiv.textContent = 'Pulling latest changes from GitHub...';
-                statusDiv.style.display = 'block';
-                
-                // Make API call to pull latest changes
-                let data;
-                try {
-                    const response = await fetch('/api/pull-latest', {
-                        method: 'POST'
-                    });
+                    // Truncate long values
+                    if (typeof displayValue === 'string' && displayValue.length > 100) {
+                        displayValue = displayValue.substring(0, 100) + '...';
+                    }
                     
-                    if (!response.ok) {
-                        if (response.status === 503) {
-                            // This is likely the server restarting
-                            logMessage('Server is restarting (503 Service Unavailable). This is expected.', 'warning');
-                            statusDiv.className = 'status info';
-                            statusDiv.textContent = 'Application is restarting. Please wait...';
-                            
-                            // Skip trying to parse JSON and jump straight to polling
-                            await handleServerRestart();
-                            return;
+                    return `<strong>${key}:</strong> ${displayValue}`;
+                })
+                .join('<br>');
+                
+            return formatted;
+        }
+
+        // Initialize S3 event listeners
+        function initS3EventListeners() {
+            // Test S3 connection
+            $('#s3-connect-btn').click(function() {
+                const endpointUrl = $('#s3-endpoint').val();
+                const accessKey = $('#s3-access-key').val();
+                const secretKey = $('#s3-secret-key').val();
+                
+                $('#s3-connection-status').html('<div class="loader"></div> Testing connection...');
+                
+                $.ajax({
+                    url: '/api/test-s3-connection',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        endpoint_url: endpointUrl,
+                        aws_access_key_id: accessKey,
+                        aws_secret_access_key: secretKey
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#s3-connection-status').html('<span class="text-success"><i class="bi bi-check-circle"></i> Connected</span>');
+                            showNotification('Successfully connected to S3', 'success');
+                            // Load buckets
+                            loadS3Buckets();
                         } else {
-                            throw new Error(`Server returned status ${response.status}`);
+                            $('#s3-connection-status').html('<span class="text-danger"><i class="bi bi-x-circle"></i> Connection failed</span>');
+                            showNotification('Failed to connect to S3: ' + response.message, 'danger');
                         }
-                    }
-                    
-                    data = await response.json();
-                    
-                    // Process server logs if available
-                    if (data.logs) {
-                        processServerLogs(data.logs);
-                    }
-                } catch (fetchError) {
-                    // If we get an error at this point, it might be that the server is restarting
-                    if (fetchError.message.includes('JSON') || fetchError.message.includes('Unexpected token')) {
-                        logMessage('Error parsing response, server might be restarting. Continuing with restart sequence...', 'warning');
-                        statusDiv.className = 'status info';
-                        statusDiv.textContent = 'Application is restarting. Please wait...';
-                        
-                        // Handle as a restart case
-                        await handleServerRestart();
-                        return;
-                    } else {
-                        // Rethrow for the outer catch block
-                        throw fetchError;
-                    }
-                }
-                
-                if (data.success) {
-                    logMessage(`Pull successful: ${data.changedFiles ? data.changedFiles.join(', ') : 'No changes'}`);
-                    
-                    if (data.needsRestart) {
-                        // Show message about the restart
-                        statusDiv.className = 'status info';
-                        
-                        if (data.requirementsChanged) {
-                            statusDiv.textContent = 'Requirements updated, application is restarting. Please wait...';
-                            logMessage('Requirements have been updated, application is restarting...', 'warning');
-                        } else {
-                            statusDiv.textContent = 'Application is restarting with new changes. Please wait...';
-                            logMessage('Application restarting...', 'warning');
-                        }
-                        
-                        // Server needs to restart - force restart by calling the endpoint again now that we've received our response
+                    },
+                    error: function(xhr) {
+                        let errorMsg = 'Failed to connect to S3';
                         try {
-                            await fetch('/api/restart', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    cause: data.requirementsChanged ? 'requirements_update' : 'code_change'
-                                })
-                            });
-                        } catch (error) {
-                            // Expected to fail as server restarts
-                            logMessage('Server restarting...', 'info');
-                        }
-                        
-                        await handleServerRestart();
-                    } else if (data.needsPageRefresh) {
-                        // Handle page refresh without server restart
-                        statusDiv.className = 'status success';
-                        statusDiv.textContent = 'Template or static files changed. Refreshing page...';
-                        logMessage('Template or static files changed, refreshing page without server restart');
-                        
-                        // First, clear browser cache for this page
-                        fetch(window.location.href, { cache: 'reload', mode: 'no-cors' })
-                          .then(() => {
-                            // Force a complete page reload bypassing cache
-                            window.location.reload(true);
-                          });
-                    } else if (data.changedFiles && data.changedFiles.length > 0) {
-                        statusDiv.className = 'status success';
-                        statusDiv.textContent = 'Changes pulled successfully!';
-                        logMessage('Changes pulled successfully (no restart or refresh needed)');
-                        button.disabled = false;
-                        button.textContent = 'Refresh';
-                    } else {
-                        statusDiv.className = 'status success';
-                        statusDiv.textContent = 'Already up to date!';
-                        logMessage('Already up to date (no changes pulled)');
-                        button.disabled = false;
-                        button.textContent = 'Refresh';
-                    }
-                } else {
-                    statusDiv.className = 'status error';
-                    statusDiv.textContent = 'Error: ' + data.error;
-                    logMessage(`Pull error: ${data.error}`, 'error');
-                    button.disabled = false;
-                    button.textContent = 'Refresh';
-                }
-            } catch (error) {
-                const statusDiv = document.getElementById('status');
-                statusDiv.className = 'status error';
-                statusDiv.textContent = 'Error pulling changes: ' + error;
-                statusDiv.style.display = 'block';
-                logMessage(`Error pulling changes: ${error}`, 'error');
-                document.getElementById('refreshButton').disabled = false;
-                document.getElementById('refreshButton').textContent = 'Refresh';
-            }
-        });
-        
-        // Function to handle server restart and polling
-        async function handleServerRestart() {
-            const statusDiv = document.getElementById('status');
-            const button = document.getElementById('refreshButton');
-            
-            // Wait a moment for the server to restart
-            logMessage('Waiting for server to restart...', 'info');
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            
-            // Start polling to check if the server is back up
-            let attempts = 0;
-            const maxAttempts = 24; // 2 minutes total (24 * 5 seconds)
-            
-            const checkServer = async () => {
-                try {
-                    logMessage(`Checking if server is back up (attempt ${attempts + 1}/${maxAttempts})`);
-                    // Use the health check endpoint
-                    const healthCheck = await fetch('/health');
-                    if (healthCheck.ok) {
-                        try {
-                            const healthData = await healthCheck.json();
-                            if (healthData.status === 'ok') {
-                                logMessage('Server is back up, reloading page');
-                                window.location.reload();
-                                return;
-                            }
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.message || errorMsg;
                         } catch (e) {
-                            logMessage('Server responded but not with valid JSON, waiting...', 'warning');
+                            console.error('Error parsing error response', e);
                         }
+                        
+                        $('#s3-connection-status').html('<span class="text-danger"><i class="bi bi-x-circle"></i> Connection failed</span>');
+                        showNotification(errorMsg, 'danger');
                     }
-                } catch (error) {
-                    logMessage('Server not ready yet', 'warning');
-                }
-                
-                attempts++;
-                if (attempts < maxAttempts) {
-                    setTimeout(checkServer, 5000);
-                } else {
-                    statusDiv.className = 'status error';
-                    statusDiv.textContent = 'Server restart is taking longer than expected. Please refresh the page manually.';
-                    logMessage('Server restart timeout', 'error');
-                    button.disabled = false;
-                    button.textContent = 'Refresh';
-                }
-            };
+                });
+            });
             
-            checkServer();
+            // S3 bucket selection
+            $('#s3-bucket-select').change(function() {
+                const bucket = $(this).val();
+                if (bucket) {
+                    currentS3Bucket = bucket;
+                    currentS3Prefix = '';
+                    updateS3Breadcrumb();
+                    loadS3Objects(bucket, '');
+                } else {
+                    $('#s3-file-table').addClass('d-none');
+                    $('#s3-placeholder').removeClass('d-none');
+                }
+            });
+            
+            // S3 refresh button
+            $('#s3-refresh-btn').click(function() {
+                loadS3Buckets();
+                if (currentS3Bucket) {
+                    loadS3Objects(currentS3Bucket, currentS3Prefix);
+                }
+            });
+            
+            // S3 file/folder click handler (delegated event)
+            $('#s3-file-list').on('click', '.folder', function() {
+                const prefix = $(this).data('path');
+                currentS3Prefix = prefix;
+                updateS3Breadcrumb();
+                loadS3Objects(currentS3Bucket, prefix);
+            });
         }
         
-        // Keyboard shortcut for search (Enter key)
-        document.getElementById('queryInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('searchButton').click();
+        // Update S3 breadcrumb navigation
+        function updateS3Breadcrumb() {
+            const $breadcrumb = $('#s3-breadcrumb');
+            $breadcrumb.empty();
+            
+            // Add root
+            $breadcrumb.append(`
+                <li class="breadcrumb-item${currentS3Prefix === '' ? ' active' : ''}">
+                    ${currentS3Prefix === '' ? 'Root' : '<a href="#" data-prefix="">Root</a>'}
+                </li>
+            `);
+            
+            // Add path segments
+            if (currentS3Prefix) {
+                const segments = currentS3Prefix.split('/');
+                let currentPath = '';
+                
+                segments.forEach((segment, index) => {
+                    if (!segment) return; // Skip empty segments
+                    
+                    currentPath += segment + '/';
+                    const isLast = index === segments.length - 1 || (index === segments.length - 2 && !segments[segments.length - 1]);
+                    
+                    $breadcrumb.append(`
+                        <li class="breadcrumb-item${isLast ? ' active' : ''}">
+                            ${isLast ? segment : `<a href="#" data-prefix="${currentPath}">${segment}</a>`}
+                        </li>
+                    `);
+                });
             }
-        });
+            
+            // Add click event for breadcrumb navigation
+            $breadcrumb.find('a').click(function(e) {
+                e.preventDefault();
+                const prefix = $(this).data('prefix');
+                currentS3Prefix = prefix;
+                updateS3Breadcrumb();
+                loadS3Objects(currentS3Bucket, prefix);
+            });
+        }
         
-        // Log initial app load
-        logMessage('Application loaded successfully');
+        // Load S3 buckets
+        function loadS3Buckets() {
+            $.ajax({
+                url: '/api/list-s3-buckets',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const $select = $('#s3-bucket-select');
+                        $select.empty();
+                        $select.append('<option value="" selected>Select a bucket</option>');
+                        
+                        response.buckets.forEach(bucket => {
+                            $select.append(`<option value="${bucket}">${bucket}</option>`);
+                        });
+                        
+                        // Restore selection if there was one
+                        if (currentS3Bucket) {
+                            $select.val(currentS3Bucket);
+                        }
+                    } else {
+                        showNotification('Failed to load S3 buckets: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    showNotification('Failed to load S3 buckets', 'danger');
+                }
+            });
+        }
+        
+        // Load S3 objects
+        function loadS3Objects(bucket, prefix) {
+            $('#s3-file-table').addClass('d-none');
+            $('#s3-placeholder').addClass('d-none');
+            $('#s3-loader').removeClass('d-none');
+            
+            $.ajax({
+                url: `/api/list-s3-objects?bucket=${bucket}&prefix=${prefix}`,
+                type: 'GET',
+                success: function(response) {
+                    $('#s3-loader').addClass('d-none');
+                    
+                    if (response.success) {
+                        const $fileList = $('#s3-file-list');
+                        $fileList.empty();
+                        
+                        // Add parent directory if not at root
+                        if (prefix) {
+                            const parts = prefix.split('/');
+                            // Remove last part or last two parts if the prefix ends with /
+                            const parentPrefix = prefix.endsWith('/') 
+                                ? parts.slice(0, -2).join('/') + '/' 
+                                : parts.slice(0, -1).join('/') + '/';
+                            
+                            if (parentPrefix !== prefix) {
+                                $fileList.append(`
+                                    <tr class="folder" data-path="${parentPrefix}">
+                                        <td><i class="bi bi-arrow-up-circle me-2"></i>..</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                    </tr>
+                                `);
+                            }
+                        }
+                        
+                        // Add directories
+                        response.directories.forEach(dir => {
+                            $fileList.append(`
+                                <tr class="folder" data-path="${dir.path}">
+                                    <td><i class="bi bi-folder me-2"></i>${dir.name}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            `);
+                        });
+                        
+                        // Add files
+                        response.files.forEach(file => {
+                            $fileList.append(`
+                                <tr class="file">
+                                    <td><i class="bi bi-file-earmark me-2"></i>${file.name}</td>
+                                    <td>${formatFileSize(file.size)}</td>
+                                    <td>${file.last_modified || '-'}</td>
+                                </tr>
+                            `);
+                        });
+                        
+                        // Show the table
+                        $('#s3-file-table').removeClass('d-none');
+                    } else {
+                        $('#s3-placeholder').removeClass('d-none');
+                        showNotification('Failed to load S3 objects: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    $('#s3-loader').addClass('d-none');
+                    $('#s3-placeholder').removeClass('d-none');
+                    showNotification('Failed to load S3 objects', 'danger');
+                }
+            });
+        }
+
+        // Initialize Weaviate event listeners
+        function initWeaviateEventListeners() {
+            // Test Weaviate connection
+            $('#weaviate-connect-btn').click(function() {
+                const weaviateUrl = $('#weaviate-url').val();
+                const weaviateToken = $('#weaviate-token').val();
+                
+                $('#weaviate-connection-status').html('<div class="loader"></div> Testing connection...');
+                
+                $.ajax({
+                    url: '/api/test-weaviate-connection',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#weaviate-connection-status').html('<span class="text-success"><i class="bi bi-check-circle"></i> Connected</span>');
+                            showNotification('Successfully connected to Weaviate', 'success');
+                            // Load collections
+                            loadWeaviateCollections();
+                        } else {
+                            $('#weaviate-connection-status').html('<span class="text-danger"><i class="bi bi-x-circle"></i> Connection failed</span>');
+                            showNotification('Failed to connect to Weaviate: ' + response.message, 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMsg = 'Failed to connect to Weaviate';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.message || errorMsg;
+                        } catch (e) {
+                            console.error('Error parsing error response', e);
+                        }
+                        
+                        $('#weaviate-connection-status').html('<span class="text-danger"><i class="bi bi-x-circle"></i> Connection failed</span>');
+                        showNotification(errorMsg, 'danger');
+                    }
+                });
+            });
+            
+            // Refresh collections button
+            $('#refresh-collections-btn').click(function() {
+                loadWeaviateCollections();
+            });
+            
+            // Collection click handler (delegated event)
+            $('#weaviate-collections-list').on('click', '.weaviate-collection', function() {
+                const collectionName = $(this).data('name');
+                const collectionData = $(this).data('collection');
+                currentCollection = collectionName;
+                
+                // Update collection details view
+                $('#collection-detail-name').text(collectionName);
+                $('#collection-description').text(collectionData.description || 'No description');
+                $('#collection-object-count').text(collectionData.object_count);
+                $('#collection-vector-index').text(collectionData.vector_index_type);
+                
+                // Update properties list
+                const $propertiesList = $('#collection-properties');
+                $propertiesList.empty();
+                
+                if (collectionData.properties && collectionData.properties.length > 0) {
+                    collectionData.properties.forEach(prop => {
+                        $propertiesList.append(`<li>${prop}</li>`);
+                    });
+                } else {
+                    $propertiesList.append('<li>No properties defined</li>');
+                }
+                
+                // Show collection details and load objects
+                $('#collection-detail-placeholder').addClass('d-none');
+                $('#collection-detail-content').removeClass('d-none');
+                
+                // Reset pagination
+                objectsPage.offset = 0;
+                loadCollectionObjects(collectionName);
+                
+                // Set delete modal data
+                $('#delete-collection-name').text(collectionName);
+            });
+            
+            // Create collection button
+            $('#create-collection-btn').click(function() {
+                // Show modal
+                const createCollectionModal = new bootstrap.Modal(document.getElementById('createCollectionModal'));
+                createCollectionModal.show();
+            });
+            
+            // Delete collection button
+            $('#delete-collection-btn').click(function() {
+                if (!currentCollection) return;
+                
+                // Set the collection name in the modal
+                $('#delete-collection-name').text(currentCollection);
+                
+                // Show modal
+                const deleteCollectionModal = new bootstrap.Modal(document.getElementById('deleteCollectionModal'));
+                deleteCollectionModal.show();
+            });
+            
+            // Confirm delete collection
+            $('#confirm-delete-collection').click(function() {
+                if (!currentCollection) return;
+                
+                $.ajax({
+                    url: '/api/delete-weaviate-collection',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: currentCollection
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            showNotification(`Collection '${currentCollection}' deleted successfully`, 'success');
+                            
+                            // Reset current collection and refresh list
+                            currentCollection = '';
+                            $('#collection-detail-placeholder').removeClass('d-none');
+                            $('#collection-detail-content').addClass('d-none');
+                            loadWeaviateCollections();
+                            
+                            // Close modal
+                            bootstrap.Modal.getInstance(document.getElementById('deleteCollectionModal')).hide();
+                        } else {
+                            showNotification('Failed to delete collection: ' + response.message, 'danger');
+                        }
+                    },
+                    error: function() {
+                        showNotification('Failed to delete collection', 'danger');
+                    }
+                });
+            });
+            
+            // Submit create collection
+            $('#submit-create-collection').click(function() {
+                const name = $('#collection-name').val();
+                const description = $('#collection-description').val();
+                const vectorIndexType = $('#vector-index-type').val();
+                
+                if (!name) {
+                    showNotification('Collection name is required', 'warning');
+                    return;
+                }
+                
+                // Gather properties
+                const properties = [];
+                $('.property-row').each(function() {
+                    const propertyName = $(this).find('input').val();
+                    const propertyType = $(this).find('select').val();
+                    
+                    if (propertyName) {
+                        properties.push({
+                            name: propertyName,
+                            dataType: [propertyType]
+                        });
+                    }
+                });
+                
+                // Create collection
+                $.ajax({
+                    url: '/api/create-weaviate-collection',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: name,
+                        description: description,
+                        properties: properties,
+                        vector_index_config: {
+                            distance: vectorIndexType
+                        }
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            showNotification(`Collection '${name}' created successfully`, 'success');
+                            
+                            // Refresh collections list
+                            loadWeaviateCollections();
+                            
+                            // Reset form and close modal
+                            resetCreateCollectionForm();
+                            bootstrap.Modal.getInstance(document.getElementById('createCollectionModal')).hide();
+                        } else {
+                            showNotification('Failed to create collection: ' + response.message, 'danger');
+                        }
+                    },
+                    error: function() {
+                        showNotification('Failed to create collection', 'danger');
+                    }
+                });
+            });
+            
+            // Refresh objects button
+            $('#refresh-objects-btn').click(function() {
+                if (currentCollection) {
+                    loadCollectionObjects(currentCollection);
+                }
+            });
+            
+            // Pagination buttons
+            $('#prev-objects-page').click(function() {
+                if (objectsPage.offset >= objectsPage.limit) {
+                    objectsPage.offset -= objectsPage.limit;
+                    loadCollectionObjects(currentCollection);
+                }
+            });
+            
+            $('#next-objects-page').click(function() {
+                if (objectsPage.offset + objectsPage.limit < objectsPage.totalCount) {
+                    objectsPage.offset += objectsPage.limit;
+                    loadCollectionObjects(currentCollection);
+                }
+            });
+        }
+        
+        // Load Weaviate collections
+        function loadWeaviateCollections() {
+            $('#weaviate-collections-placeholder').addClass('d-none');
+            $('#weaviate-collections-list').addClass('d-none');
+            $('#weaviate-loader').removeClass('d-none');
+            
+            $.ajax({
+                url: '/api/list-weaviate-collections',
+                type: 'GET',
+                success: function(response) {
+                    $('#weaviate-loader').addClass('d-none');
+                    
+                    if (response.success) {
+                        const $collectionsList = $('#weaviate-collections-list');
+                        $collectionsList.empty();
+                        
+                        if (response.collections && response.collections.length > 0) {
+                            response.collections.forEach(collection => {
+                                $collectionsList.append(`
+                                    <div class="weaviate-collection" data-name="${collection.name}" data-collection='${JSON.stringify(collection)}'>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>${collection.name}</strong>
+                                                <div class="small text-muted">${collection.object_count} objects</div>
+                                            </div>
+                                            <i class="bi bi-chevron-right"></i>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                            
+                            $collectionsList.removeClass('d-none');
+                        } else {
+                            $('#weaviate-collections-placeholder').removeClass('d-none');
+                            $('#weaviate-collections-placeholder').html(`
+                                <i class="bi bi-diagram-3 fs-1 text-muted"></i>
+                                <p class="mt-3">No collections found</p>
+                            `);
+                        }
+                    } else {
+                        $('#weaviate-collections-placeholder').removeClass('d-none');
+                        showNotification('Failed to load Weaviate collections: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    $('#weaviate-loader').addClass('d-none');
+                    $('#weaviate-collections-placeholder').removeClass('d-none');
+                    showNotification('Failed to load Weaviate collections', 'danger');
+                }
+            });
+        }
+        
+        // Load collection objects
+        function loadCollectionObjects(collectionName) {
+            $('#collection-objects-list').empty();
+            $('#objects-loader').removeClass('d-none');
+            
+            $.ajax({
+                url: `/api/list-weaviate-objects?collection=${collectionName}&limit=${objectsPage.limit}&offset=${objectsPage.offset}`,
+                type: 'GET',
+                success: function(response) {
+                    $('#objects-loader').addClass('d-none');
+                    
+                    if (response.success) {
+                        const $objectsList = $('#collection-objects-list');
+                        $objectsList.empty();
+                        
+                        // Update total count
+                        objectsPage.totalCount = response.total_count;
+                        
+                        // Update pagination info
+                        const start = Math.min(objectsPage.offset + 1, objectsPage.totalCount);
+                        const end = Math.min(objectsPage.offset + objectsPage.limit, objectsPage.totalCount);
+                        $('#objects-pagination-info').text(`Showing ${start}-${end} of ${objectsPage.totalCount} objects`);
+                        
+                        // Update pagination buttons
+                        $('#prev-objects-page').prop('disabled', objectsPage.offset === 0);
+                        $('#next-objects-page').prop('disabled', end >= objectsPage.totalCount);
+                        
+                        // Add objects to table
+                        if (response.objects && response.objects.length > 0) {
+                            response.objects.forEach(obj => {
+                                $objectsList.append(`
+                                    <tr>
+                                        <td class="text-break"><code>${obj.id}</code></td>
+                                        <td>${formatProperties(obj.properties)}</td>
+                                    </tr>
+                                `);
+                            });
+                        } else {
+                            $objectsList.append(`
+                                <tr>
+                                    <td colspan="2" class="text-center">No objects found</td>
+                                </tr>
+                            `);
+                        }
+                    } else {
+                        showNotification('Failed to load collection objects: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    $('#objects-loader').addClass('d-none');
+                    showNotification('Failed to load collection objects', 'danger');
+                }
+            });
+        }
+
+        // Initialize modals
+        function initModals() {
+            // Add property button
+            $('#add-property-btn').click(function() {
+                const newPropertyRow = `
+                    <div class="property-row d-flex mb-2">
+                        <input type="text" class="form-control me-2" placeholder="Property name">
+                        <select class="form-select me-2">
+                            <option value="text">Text</option>
+                            <option value="int">Integer</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">Boolean</option>
+                            <option value="date">Date</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-danger remove-property-btn">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                `;
+                $('#properties-container').append(newPropertyRow);
+            });
+            
+            // Remove property button (delegated event)
+            $('#properties-container').on('click', '.remove-property-btn', function() {
+                $(this).closest('.property-row').remove();
+            });
+            
+            // Reset form when modal is hidden
+            $('#createCollectionModal').on('hidden.bs.modal', function() {
+                resetCreateCollectionForm();
+            });
+        }
+        
+        // Reset create collection form
+        function resetCreateCollectionForm() {
+            $('#collection-name').val('');
+            $('#collection-description').val('');
+            $('#vector-index-type').val('cosine');
+            
+            // Reset properties
+            $('#properties-container').empty();
+            $('#properties-container').append(`
+                <div class="property-row d-flex mb-2">
+                    <input type="text" class="form-control me-2" placeholder="Property name">
+                    <select class="form-select me-2">
+                        <option value="text">Text</option>
+                        <option value="int">Integer</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="date">Date</option>
+                    </select>
+                    <button type="button" class="btn btn-outline-danger remove-property-btn">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `);
+        }
     </script>
 </body>
-</html>
+</html> 

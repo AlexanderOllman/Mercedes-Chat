@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes Image Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .main-content {
+            flex: 3;
+        }
+        
+        .settings-panel {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .chat-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .search-button {
+            background-color: #00548c;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .search-button:hover {
+            background-color: #003362;
+        }
+        
+        .results-area {
+            margin-top: 30px;
+        }
+        
+        .carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .carousel-item {
+            flex: 0 0 auto;
+            width: 300px;
+            scroll-snap-align: start;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .carousel-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .carousel-caption {
+            padding: 15px;
+            background: white;
+        }
+        
+        .btn-refresh {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .btn-refresh:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-refresh:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .settings-title {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .save-settings {
+            background-color: #00548c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .save-settings:hover {
+            background-color: #003362;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px auto;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #00548c;
+            animation: spin 1s ease infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Add styling for the embedding section */
+        #datasetInput {
+            width: 100%;
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .embed-button {
+            background-color: #324ea8;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .embed-button:hover {
+            background-color: #263b94;
+        }
+        
+        .embed-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Styles for the log container */
+        .log-container {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        
+        .log-output {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #252525;
+            color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+        
+        .log-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+        
+        .clear-log-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .clear-log-button:hover {
+            background-color: #5a6268;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .log-time {
+            color: #888;
+            margin-right: 5px;
+        }
+        
+        .log-info {
+            color: #4caf50;
+        }
+        
+        .log-warning {
+            color: #ff9800;
+        }
+        
+        .log-error {
+            color: #f44336;
+        }
+        
+        /* Styles for the test connection buttons */
+        .test-connection-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        
+        .test-connection-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 1;
+        }
+        
+        .test-connection-button:hover {
+            background-color: #5a6268;
+        }
+        
+        .test-connection-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .test-connection-status {
+            display: none;
+            margin-top: 5px;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .test-connection-status.success {
+            display: block;
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .test-connection-status.error {
+            display: block;
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .test-connection-status.info {
+            display: block;
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 text-white">
+            <div class="p-4">
+                <h1 class="text-xl font-bold">Mercedes Chat</h1>
+            </div>
+            <nav class="mt-6">
+                <a href="/" class="flex items-center px-4 py-3 hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span>Home</span>
+                </a>
+                <a href="/settings" class="flex items-center px-4 py-3 hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <div class="container p-6">
+                <h1>Mercedes Image Chatbot - push three!!!!</h1>
+                
+                <div class="container">
+                    <div class="main-content">
+                        <input type="text" id="queryInput" class="chat-input" placeholder="Describe what you're looking for...">
+                        <button id="searchButton" class="search-button">Search</button>
+                        
+                        <div class="loading" id="loadingIndicator">
+                            <div class="spinner"></div>
+                            <p>Searching for images...</p>
+                        </div>
+                        
+                        <div class="results-area">
+                            <h2>Results</h2>
+                            <div id="resultsCarousel" class="carousel">
+                                <!-- Results will be dynamically inserted here -->
+                            </div>
+                        </div>
+                        
+                        <div class="log-container">
+                            <h2>Operation Logs</h2>
+                            <div class="log-controls">
+                                <button id="clearLogButton" class="clear-log-button">Clear Logs</button>
+                            </div>
+                            <pre id="logOutput" class="log-output"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-panel">
+                        <h3 class="settings-title">Settings</h3>
+                        
+                        <button id="refreshButton" class="btn-refresh">Refresh</button>
+                        
+                        <div id="status" class="status" style="display: none;"></div>
+                        
+                        <h4>S3 Configuration</h4>
+                        <div>
+                            <label for="s3Endpoint">S3 Endpoint URL:</label>
+                            <input type="text" id="s3Endpoint" placeholder="https://s3.example.com">
+                        </div>
+                        
+                        <div>
+                            <label for="s3AccessKey">Access Key ID:</label>
+                            <input type="text" id="s3AccessKey" placeholder="AKIAXXXXXXXX">
+                        </div>
+                        
+                        <div>
+                            <label for="s3SecretKey">Secret Access Key:</label>
+                            <input type="password" id="s3SecretKey" placeholder="Enter secret key">
+                        </div>
+                        
+                        <div>
+                            <label for="s3BucketName">Bucket Name:</label>
+                            <input type="text" id="s3BucketName" placeholder="my-bucket" value="poc-mercedes-gp">
+                        </div>
+                        
+                        <h4>Weaviate Configuration</h4>
+                        <div>
+                            <label for="weaviateUrl">Weaviate URL:</label>
+                            <input type="text" id="weaviateUrl" placeholder="weaviate.poc-weaviate.svc.cluster.local">
+                        </div>
+                        
+                        <div>
+                            <label for="weaviateToken">Weaviate Token:</label>
+                            <input type="password" id="weaviateToken" placeholder="Enter auth token">
+                        </div>
+                        
+                        <button id="saveSettingsButton" class="save-settings">Save Settings</button>
+                        
+                        <h4>Weaviate Collections Management</h4>
+                        <p>View and manage Weaviate collections</p>
+                        
+                        <div class="collection-controls">
+                            <button id="listCollectionsButton" class="embed-button">List Collections</button>
+                            <button id="refreshCollectionsButton" class="embed-button">Refresh</button>
+                        </div>
+                        
+                        <div id="collectionsContainer" class="mt-3" style="max-height: 200px; overflow-y: auto; display: none;">
+                            <div id="collectionsLoading" style="display: none;">
+                                Loading collections...
+                            </div>
+                            <div id="collectionsList"></div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label for="newCollectionName">New Collection Name:</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="newCollectionName" placeholder="Enter collection name">
+                                <button id="createCollectionButton" class="embed-button">Create</button>
+                            </div>
+                        </div>
+                        
+                        <div id="collectionStatus" class="status" style="display: none;"></div>
+                        
+                        <h4>Embedding</h4>
+                        <p>Process and embed text descriptions into Weaviate (no image processing)</p>
+                        <textarea id="datasetInput" rows="10" placeholder='[{"s3_key": "training/03_05Bah_Sunday_Alfa Romeo_013.JPG", "text": "A photo of a floor"}]'></textarea>
+                        <button id="embedButton" class="embed-button">Embed Text Data</button>
+                        <div id="embedStatus" class="status" style="display: none;"></div>
+                        
+                        <h4>Load Training Data</h4>
+                        <p>Load and process training.json from S3 into Weaviate</p>
+                        <div>
+                            <label for="trainingFilePath">Training File Path:</label>
+                            <input type="text" id="trainingFilePath" placeholder="training/training.json" value="training/training.json">
+                        </div>
+                        <button id="loadTrainingButton" class="embed-button">Load Training Data</button>
+                        <div id="trainingStatus" class="status" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Logging functionality
+        const logOutput = document.getElementById('logOutput');
+        
+        function logMessage(message, type = 'info') {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = `[${timeString}]`;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.className = `log-${type}`;
+            messageSpan.textContent = ` ${message}`;
+            
+            logEntry.appendChild(timeSpan);
+            logEntry.appendChild(messageSpan);
+            
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        // Clear logs functionality
+        document.getElementById('clearLogButton').addEventListener('click', function() {
+            logOutput.innerHTML = '';
+            logMessage('Logs cleared');
+        });
+        
+        // Display results in carousel
+        function displayResults(results) {
+            const carousel = document.getElementById('resultsCarousel');
+            carousel.innerHTML = '';
+            
+            if (results.length === 0) {
+                carousel.innerHTML = '<p>No results found</p>';
+                logMessage('No results found', 'warning');
+                return;
+            }
+            
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'carousel-item';
+                
+                const img = document.createElement('img');
+                img.src = result.image;
+                img.alt = result.text;
+                
+                const caption = document.createElement('div');
+                caption.className = 'carousel-caption';
+                caption.textContent = result.text;
+                
+                item.appendChild(img);
+                item.appendChild(caption);
+                carousel.appendChild(item);
+                
+                logMessage(`Result ${index+1}: s3_key=${result.s3_key}, text="${result.text}"`);
+            });
+        }
+        
+        // Process server logs
+        function processServerLogs(logs) {
+            if (!logs || !Array.isArray(logs)) return;
+            
+            logs.forEach(log => {
+                // Determine log type based on content
+                let type = 'info';
+                if (log.includes('Error') || log.includes('Failed') || log.includes('error')) {
+                    type = 'error';
+                } else if (log.includes('Warning') || log.includes('warning')) {
+                    type = 'warning';
+                }
+                
+                logMessage(`[Server] ${log}`, type);
+            });
+        }
+        
+        // Search functionality
+        document.getElementById('searchButton').addEventListener('click', async function() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) return;
+            
+            logMessage(`Starting search for: "${query}"`);
+            
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsCarousel').innerHTML = '';
+            
+            try {
+                logMessage('Sending request to server...');
+                
+                const s3Endpoint = document.getElementById('s3Endpoint').value;
+                const s3AccessKey = document.getElementById('s3AccessKey').value;
+                const s3SecretKey = document.getElementById('s3SecretKey').value;
+                const s3BucketName = document.getElementById('s3BucketName').value;
+                const weaviateUrl = document.getElementById('weaviateUrl').value;
+                const weaviateToken = document.getElementById('weaviateToken').value;
+                
+                logMessage(`Using S3 endpoint: ${s3Endpoint || 'default'}`);
+                logMessage(`Using S3 bucket: ${s3BucketName || 'default'}`);
+                logMessage(`Using Weaviate URL: ${weaviateUrl || 'default'}`);
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName,
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
+                });
+                
+                logMessage('Received response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                if (data.success) {
+                    logMessage(`Found ${data.results.length} results`);
+                    displayResults(data.results);
+                } else {
+                    logMessage(`Error: ${data.error}`, 'error');
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                logMessage(`Error performing search: ${error}`, 'error');
+                alert('Error performing search: ' + error);
+            }
+        });
+        
+        // Settings functionality
+        document.getElementById('saveSettingsButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Saving...';
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Testing connections and saving settings...';
+            statusDiv.className = 'status info';
+            statusDiv.style.display = 'block';
+            
+            logMessage('Testing connections and saving settings...');
+            
+            try {
+                // Test S3 connection first
+                logMessage('Testing S3 connection...');
+                const s3Endpoint = document.getElementById('s3Endpoint').value;
+                const s3AccessKey = document.getElementById('s3AccessKey').value;
+                const s3SecretKey = document.getElementById('s3SecretKey').value;
+                const s3BucketName = document.getElementById('s3BucketName').value;
+                
+                if (!s3BucketName) {
+                    logMessage('Error: S3 bucket name is required', 'error');
+                    statusDiv.textContent = 'Error: S3 bucket name is required';
+                    statusDiv.className = 'status error';
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                // Test S3 connection
+                const s3Response = await fetch('/api/test-s3-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName
+                    })
+                });
+                
+                const s3Data = await s3Response.json();
+                
+                if (s3Data.logs) {
+                    processServerLogs(s3Data.logs);
+                }
+                
+                if (!s3Data.success) {
+                    statusDiv.textContent = 'Error: S3 connection failed: ' + s3Data.error;
+                    statusDiv.className = 'status error';
+                    logMessage('S3 connection failed: ' + s3Data.error, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                logMessage('S3 connection successful!', 'info');
+                
+                // Now test Weaviate connection
+                logMessage('Testing Weaviate connection...');
+                const weaviateUrl = document.getElementById('weaviateUrl').value;
+                const weaviateToken = document.getElementById('weaviateToken').value;
+                
+                const weaviateResponse = await fetch('/api/test-weaviate-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
+                });
+                
+                const weaviateData = await weaviateResponse.json();
+                
+                if (weaviateData.logs) {
+                    processServerLogs(weaviateData.logs);
+                }
+                
+                if (!weaviateData.success) {
+                    statusDiv.textContent = 'Error: Weaviate connection failed: ' + weaviateData.error;
+                    statusDiv.className = 'status error';
+                    logMessage('Weaviate connection failed: ' + weaviateData.error, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Save Settings';
+                    return;
+                }
+                
+                logMessage('Weaviate connection successful!', 'info');
+                logMessage('Both connections successful, saving settings...', 'info');
+                
+                // Now save the settings
+                const response = await fetch('/api/update-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        s3_endpoint: s3Endpoint,
+                        aws_access_key_id: s3AccessKey,
+                        aws_secret_access_key: s3SecretKey,
+                        s3_bucket_name: s3BucketName,
+                        weaviate_url: weaviateUrl,
+                        weaviate_token: weaviateToken
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.textContent = 'Connections tested and settings saved successfully!';
+                    statusDiv.className = 'status success';
+                    logMessage('Connections tested and settings saved successfully!', 'info');
+                } else {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Error saving settings: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error: ' + error;
+                statusDiv.className = 'status error';
+                logMessage(`Error during connection testing or saving: ${error}`, 'error');
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Save Settings';
+        });
+        
+        // Embedding functionality
+        document.getElementById('embedButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Embedding...';
+            const statusDiv = document.getElementById('embedStatus');
+            statusDiv.textContent = 'Processing and embedding text data...';
+            statusDiv.className = 'status info';
+            statusDiv.style.display = 'block';
+            
+            logMessage('Starting embedding process...');
+            
+            try {
+                // Parse the dataset JSON
+                let dataset;
+                try {
+                    const datasetText = document.getElementById('datasetInput').value;
+                    logMessage(`Parsing dataset: ${datasetText.length} characters`);
+                    
+                    dataset = JSON.parse(datasetText);
+                    if (!Array.isArray(dataset)) {
+                        throw new Error('Dataset must be an array');
+                    }
+                    
+                    logMessage(`Successfully parsed dataset with ${dataset.length} items`);
+                } catch (parseError) {
+                    statusDiv.textContent = 'Error parsing dataset JSON: ' + parseError;
+                    statusDiv.className = 'status error';
+                    logMessage(`Error parsing JSON: ${parseError}`, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Embed Text Data';
+                    return;
+                }
+                
+                logMessage(`Connecting to Weaviate at ${document.getElementById('weaviateUrl').value || 'default URL'}`);
+                
+                const response = await fetch('/api/embed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataset: dataset,
+                        weaviate_url: document.getElementById('weaviateUrl').value,
+                        weaviate_token: document.getElementById('weaviateToken').value
+                    })
+                });
+                
+                logMessage('Received embedding response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                if (data.success) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status success';
+                    logMessage(`Embedding completed: ${data.message}`, 'info');
+                } else {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Embedding error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error embedding data: ' + error;
+                statusDiv.className = 'status error';
+                logMessage(`Embedding error: ${error}`, 'error');
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Embed Text Data';
+        });
+        
+        // Load Training Data functionality
+        document.getElementById('loadTrainingButton').addEventListener('click', async function() {
+            const button = this;
+            button.disabled = true;
+            button.textContent = 'Loading...';
+            const statusDiv = document.getElementById('trainingStatus');
+            statusDiv.textContent = 'Loading and processing training data...';
+            statusDiv.className = 'status info';
+            statusDiv.style.display = 'block';
+            
+            logMessage('Starting training data load process...');
+            
+            try {
+                const filePath = document.getElementById('trainingFilePath').value;
+                logMessage(`Loading training data from: ${filePath}`);
+                
+                const response = await fetch('/api/load-training-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        s3_endpoint: document.getElementById('s3Endpoint').value,
+                        aws_access_key_id: document.getElementById('s3AccessKey').value,
+                        aws_secret_access_key: document.getElementById('s3SecretKey').value,
+                        s3_bucket_name: document.getElementById('s3BucketName').value,
+                        weaviate_url: document.getElementById('weaviateUrl').value,
+                        weaviate_token: document.getElementById('weaviateToken').value
+                    })
+                });
+                
+                logMessage('Received training data load response from server');
+                
+                const data = await response.json();
+                
+                // Process server logs if available
+                if (data.logs) {
+                    processServerLogs(data.logs);
+                }
+                
+                if (data.success) {
+                    statusDiv.textContent = data.message;
+                    statusDiv.className = 'status success';
+                    logMessage(`Training data load completed: ${data.message}`, 'info');
+                } else {
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    statusDiv.className = 'status error';
+                    logMessage(`Training data load error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error loading training data: ' + error;
+                statusDiv.className = 'status error';
+                logMessage(`Training data load error: ${error}`, 'error');
+            }
+            
+            button.disabled = false;
+            button.textContent = 'Load Training Data';
+        });
+        
+        // Refresh button functionality
+        document.getElementById('refreshButton').addEventListener('click', async function() {
+            try {
+                const button = this;
+                const statusDiv = document.getElementById('status');
+                
+                logMessage('Refreshing application...');
+                
+                // Disable button and show loading state
+                button.disabled = true;
+                button.textContent = 'Pulling changes...';
+                statusDiv.className = 'status info';
+                statusDiv.textContent = 'Pulling latest changes from GitHub...';
+                statusDiv.style.display = 'block';
+                
+                // Make API call to pull latest changes
+                let data;
+                try {
+                    const response = await fetch('/api/pull-latest', {
+                        method: 'POST'
+                    });
+                    
+                    if (!response.ok) {
+                        if (response.status === 503) {
+                            // This is likely the server restarting
+                            logMessage('Server is restarting (503 Service Unavailable). This is expected.', 'warning');
+                            statusDiv.className = 'status info';
+                            statusDiv.textContent = 'Application is restarting. Please wait...';
+                            
+                            // Skip trying to parse JSON and jump straight to polling
+                            await handleServerRestart();
+                            return;
+                        } else {
+                            throw new Error(`Server returned status ${response.status}`);
+                        }
+                    }
+                    
+                    data = await response.json();
+                    
+                    // Process server logs if available
+                    if (data.logs) {
+                        processServerLogs(data.logs);
+                    }
+                } catch (fetchError) {
+                    // If we get an error at this point, it might be that the server is restarting
+                    if (fetchError.message.includes('JSON') || fetchError.message.includes('Unexpected token')) {
+                        logMessage('Error parsing response, server might be restarting. Continuing with restart sequence...', 'warning');
+                        statusDiv.className = 'status info';
+                        statusDiv.textContent = 'Application is restarting. Please wait...';
+                        
+                        // Handle as a restart case
+                        await handleServerRestart();
+                        return;
+                    } else {
+                        // Rethrow for the outer catch block
+                        throw fetchError;
+                    }
+                }
+                
+                if (data.success) {
+                    logMessage(`Pull successful: ${data.changedFiles ? data.changedFiles.join(', ') : 'No changes'}`);
+                    
+                    if (data.needsRestart) {
+                        // Show message about the restart
+                        statusDiv.className = 'status info';
+                        
+                        if (data.requirementsChanged) {
+                            statusDiv.textContent = 'Requirements updated, application is restarting. Please wait...';
+                            logMessage('Requirements have been updated, application is restarting...', 'warning');
+                        } else {
+                            statusDiv.textContent = 'Application is restarting with new changes. Please wait...';
+                            logMessage('Application restarting...', 'warning');
+                        }
+                        
+                        // Server needs to restart - force restart by calling the endpoint again now that we've received our response
+                        try {
+                            await fetch('/api/restart', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    cause: data.requirementsChanged ? 'requirements_update' : 'code_change'
+                                })
+                            });
+                        } catch (error) {
+                            // Expected to fail as server restarts
+                            logMessage('Server restarting...', 'info');
+                        }
+                        
+                        await handleServerRestart();
+                    } else if (data.needsPageRefresh) {
+                        // Handle page refresh without server restart
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Template or static files changed. Refreshing page...';
+                        logMessage('Template or static files changed, refreshing page without server restart');
+                        
+                        // First, clear browser cache for this page
+                        fetch(window.location.href, { cache: 'reload', mode: 'no-cors' })
+                          .then(() => {
+                            // Force a complete page reload bypassing cache
+                            window.location.reload(true);
+                          });
+                    } else if (data.changedFiles && data.changedFiles.length > 0) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Changes pulled successfully!';
+                        logMessage('Changes pulled successfully (no restart or refresh needed)');
+                        button.disabled = false;
+                        button.textContent = 'Refresh';
+                    } else {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'Already up to date!';
+                        logMessage('Already up to date (no changes pulled)');
+                        button.disabled = false;
+                        button.textContent = 'Refresh';
+                    }
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Error: ' + data.error;
+                    logMessage(`Pull error: ${data.error}`, 'error');
+                    button.disabled = false;
+                    button.textContent = 'Refresh';
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('status');
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error pulling changes: ' + error;
+                statusDiv.style.display = 'block';
+                logMessage(`Error pulling changes: ${error}`, 'error');
+                document.getElementById('refreshButton').disabled = false;
+                document.getElementById('refreshButton').textContent = 'Refresh';
+            }
+        });
+        
+        // Function to handle server restart and polling
+        async function handleServerRestart() {
+            const statusDiv = document.getElementById('status');
+            const button = document.getElementById('refreshButton');
+            
+            // Wait a moment for the server to restart
+            logMessage('Waiting for server to restart...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Start polling to check if the server is back up
+            let attempts = 0;
+            const maxAttempts = 24; // 2 minutes total (24 * 5 seconds)
+            
+            const checkServer = async () => {
+                try {
+                    logMessage(`Checking if server is back up (attempt ${attempts + 1}/${maxAttempts})`);
+                    // Use the health check endpoint
+                    const healthCheck = await fetch('/health');
+                    if (healthCheck.ok) {
+                        try {
+                            const healthData = await healthCheck.json();
+                            if (healthData.status === 'ok') {
+                                logMessage('Server is back up, reloading page');
+                                window.location.reload();
+                                return;
+                            }
+                        } catch (e) {
+                            logMessage('Server responded but not with valid JSON, waiting...', 'warning');
+                        }
+                    }
+                } catch (error) {
+                    logMessage('Server not ready yet', 'warning');
+                }
+                
+                attempts++;
+                if (attempts < maxAttempts) {
+                    setTimeout(checkServer, 5000);
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = 'Server restart is taking longer than expected. Please refresh the page manually.';
+                    logMessage('Server restart timeout', 'error');
+                    button.disabled = false;
+                    button.textContent = 'Refresh';
+                }
+            };
+            
+            checkServer();
+        }
+        
+        // Keyboard shortcut for search (Enter key)
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchButton').click();
+            }
+        });
+        
+        // Log initial app load
+        logMessage('Application loaded successfully');
+    </script>
+</body>
+</html>

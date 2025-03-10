@@ -1,14 +1,6 @@
 flask
-kubernetes
 requests
-flask-socketio
-eventlet
-huggingface_hub
-PyYAML
-boto3
-langchain
-faiss-cpu
 python-dotenv
-pillow
+boto3
 weaviate-client
-numpy
+pillow
