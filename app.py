@@ -603,12 +603,16 @@ def pull_latest():
             text=True
         )
         
+        # Variable to track if we stashed changes
+        stashed_changes = False
+        
         if status_result.stdout.strip():
             # There are uncommitted changes, stash them
             log_msg = "Stashing local changes before pull"
             logger.info(log_msg)
             logs.append(log_msg)
             subprocess.run(['git', 'stash'], cwd=app_dir)
+            stashed_changes = True
         
         # Get the current commit hash before pull
         before_pull_hash = subprocess.run(
@@ -681,6 +685,22 @@ def pull_latest():
             capture_output=True,
             text=True
         ).stdout.strip()
+        
+        # If we stashed changes earlier, apply them back now
+        if stashed_changes:
+            log_msg = "Applying stashed local changes after pull"
+            logger.info(log_msg)
+            logs.append(log_msg)
+            stash_apply_result = subprocess.run(
+                ['git', 'stash', 'pop'],
+                cwd=app_dir,
+                capture_output=True,
+                text=True
+            )
+            if stash_apply_result.returncode != 0:
+                conflict_msg = f"Warning: Could not apply stashed changes cleanly: {stash_apply_result.stderr}"
+                logger.warning(conflict_msg)
+                logs.append(conflict_msg)
         
         # Verify that the pull actually changed something
         if before_pull_hash == after_pull_hash:
