@@ -12,10 +12,10 @@ from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
 import weaviate
-import tensorflow as tf
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.applications.resnet50 import preprocess_input
-from tensorflow.keras.preprocessing.image import img_to_array
+# import tensorflow as tf
+# from tensorflow.keras.applications import ResNet50
+# from tensorflow.keras.applications.resnet50 import preprocess_input
+# from tensorflow.keras.preprocessing.image import img_to_array
 
 # Load environment variables
 load_dotenv()
@@ -45,8 +45,9 @@ weaviate_logger.addHandler(weaviate_file_handler)
 
 # Embedding model setup
 def load_embedding_model():
-    model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
-    return model
+    # model = ResNet50(weights='imagenet', include_top=False, pooling='avg')
+    # return model
+    return None
 
 # Initialize the embedding model
 embedding_model = load_embedding_model()
@@ -206,10 +207,11 @@ def image_to_numpy_array(image, target_size=(224, 224)):
     try:
         image = image.resize(target_size)
         image = image.convert('RGB')  # Ensure image is in RGB format
-        img_array = img_to_array(image)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = preprocess_input(img_array)
-        return img_array
+        # img_array = img_to_array(image)
+        # img_array = np.expand_dims(img_array, axis=0)
+        # img_array = preprocess_input(img_array)
+        # return img_array
+        return None
     except Exception as e:
         logger.error(f"Error converting image to numpy array: {str(e)}")
         return None
@@ -217,8 +219,9 @@ def image_to_numpy_array(image, target_size=(224, 224)):
 def get_image_embedding(model, img_array):
     """Generate embedding from image array"""
     try:
-        embedding = model.predict(img_array)
-        return embedding.flatten()
+        # embedding = model.predict(img_array)
+        # return embedding.flatten()
+        return None
     except Exception as e:
         logger.error(f"Error generating image embedding: {str(e)}")
         return None
