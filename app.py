@@ -595,26 +595,12 @@ def pull_latest():
 
         logs = []
         
-        # Make sure git status is clean first - check for any local changes
-        status_result = subprocess.run(
-            ['git', 'status', '--porcelain'],
-            cwd=app_dir,
-            capture_output=True,
-            text=True
-        )
+        # For Kubernetes environments, we'll take a different approach
+        log_msg = "Running in Kubernetes environment, using hard reset approach for clean updates"
+        logger.info(log_msg)
+        logs.append(log_msg)
         
-        # Variable to track if we stashed changes
-        stashed_changes = False
-        
-        if status_result.stdout.strip():
-            # There are uncommitted changes, stash them
-            log_msg = "Stashing local changes before pull"
-            logger.info(log_msg)
-            logs.append(log_msg)
-            subprocess.run(['git', 'stash'], cwd=app_dir)
-            stashed_changes = True
-        
-        # Get the current commit hash before pull
+        # Get the current commit hash before fetch
         before_pull_hash = subprocess.run(
             ['git', 'rev-parse', 'HEAD'],
             cwd=app_dir,
@@ -622,7 +608,7 @@ def pull_latest():
             text=True
         ).stdout.strip()
         
-        # Get the remote hash to compare with local before pulling
+        # Fetch latest changes without applying them yet
         fetch_result = subprocess.run(
             ['git', 'fetch', '--quiet', 'origin', 'main'],
             cwd=app_dir,
@@ -661,64 +647,26 @@ def pull_latest():
                 'logs': [log_message]
             })
         
-        # Run git pull
-        result = subprocess.run(
-            ['git', 'pull', 'origin', 'main'],
+        # In Kubernetes, we'll do a hard reset to ensure we get all remote changes cleanly
+        reset_result = subprocess.run(
+            ['git', 'reset', '--hard', 'origin/main'],
             cwd=app_dir,
             capture_output=True,
             text=True
         )
         
-        if result.returncode != 0:
-            error_msg = f'Git pull failed: {result.stderr}'
+        if reset_result.returncode != 0:
+            error_msg = f'Git reset failed: {reset_result.stderr}'
             logger.error(error_msg)
             return jsonify({
                 'success': False,
                 'error': error_msg,
                 'logs': [error_msg]
             })
-        
-        # Get the commit hash after pull
-        after_pull_hash = subprocess.run(
-            ['git', 'rev-parse', 'HEAD'],
-            cwd=app_dir,
-            capture_output=True,
-            text=True
-        ).stdout.strip()
-        
-        # If we stashed changes earlier, apply them back now
-        if stashed_changes:
-            log_msg = "Applying stashed local changes after pull"
-            logger.info(log_msg)
-            logs.append(log_msg)
-            stash_apply_result = subprocess.run(
-                ['git', 'stash', 'pop'],
-                cwd=app_dir,
-                capture_output=True,
-                text=True
-            )
-            if stash_apply_result.returncode != 0:
-                conflict_msg = f"Warning: Could not apply stashed changes cleanly: {stash_apply_result.stderr}"
-                logger.warning(conflict_msg)
-                logs.append(conflict_msg)
-        
-        # Verify that the pull actually changed something
-        if before_pull_hash == after_pull_hash:
-            log_message = "Pull completed but no changes were made"
-            logger.info(log_message)
-            return jsonify({
-                'success': True,
-                'message': log_message,
-                'needsRestart': False,
-                'changedFiles': [],
-                'templatesChanged': False,
-                'requirementsChanged': False,
-                'logs': [log_message]
-            })
-        
+            
         # Check what files changed between the two commits
         changed_files = subprocess.run(
-            ['git', 'diff', '--name-only', before_pull_hash, after_pull_hash],
+            ['git', 'diff', '--name-only', before_pull_hash, remote_hash],
             cwd=app_dir,
             capture_output=True,
             text=True
@@ -740,7 +688,7 @@ def pull_latest():
         
         response = {
             'success': True,
-            'message': result.stdout,
+            'message': reset_result.stdout,
             'needsRestart': needs_restart,
             'needsPageRefresh': needs_page_refresh,
             'changedFiles': changed_files,
@@ -829,15 +777,62 @@ def restart_app():
     try:
         cause = request.json.get('cause', 'unknown')
         logger.info(f"Received request to restart the application. Cause: {cause}")
-        
+
         # Create a delayed restart to allow the response to be sent first
         def delayed_restart():
             time.sleep(1)  # Wait 1 second to allow the response to be sent
-            logger.info("Executing delayed restart...")
+            logger.info("Executing hard restart sequence...")
+            
             try:
+                # Get the directory where the application is running
+                app_dir = os.path.dirname(os.path.abspath(__file__))
+                
+                # Force a clean update by pulling latest code
+                logger.info("Forcing git reset to ensure clean state...")
+                try:
+                    # Hard reset any local changes - this is needed in kubernetes environment
+                    subprocess.run(['git', 'reset', '--hard', 'HEAD'], cwd=app_dir, check=True)
+                    
+                    # Pull latest code
+                    logger.info("Pulling latest code...")
+                    subprocess.run(['git', 'pull', 'origin', 'main'], cwd=app_dir, check=True)
+                except Exception as git_error:
+                    logger.error(f"Git operations failed: {str(git_error)}")
+                
+                # Execute a "clean" restart by replacing the current process
+                logger.info("Executing clean restart by replacing process...")
+                
+                # Kill any other Python processes (in Kubernetes this may not work as expected
+                # but we'll try it anyway)
+                try:
+                    my_pid = os.getpid()
+                    # Find all Python processes except our own
+                    ps_result = subprocess.run(
+                        ["ps", "-ef"], 
+                        capture_output=True, 
+                        text=True
+                    )
+                    if ps_result.returncode == 0:
+                        for line in ps_result.stdout.splitlines():
+                            if "python" in line and str(my_pid) not in line:
+                                try:
+                                    # Extract PID and kill it
+                                    pid = int(line.split()[1])
+                                    logger.info(f"Attempting to kill Python process {pid}")
+                                    os.kill(pid, 9)  # SIGKILL
+                                except (ValueError, ProcessLookupError) as e:
+                                    logger.warning(f"Could not kill process: {str(e)}")
+                except Exception as kill_error:
+                    logger.error(f"Process killing failed: {str(kill_error)}")
+                
+                # Replace the current process with a fresh Python process
+                logger.info("Replacing current process with fresh Python process")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
             except Exception as e:
                 logger.error(f"Error during restart: {str(e)}")
+                # As a last resort, exit with error code to trigger container restart
+                logger.critical("Exiting process to force container restart")
+                os._exit(1)
         
         # Start a background thread to restart the server
         import threading
@@ -848,11 +843,11 @@ def restart_app():
         # Send the success response before restarting
         return jsonify({
             'success': True,
-            'message': 'Restarting server...',
-            'logs': ['Restart triggered, server will restart momentarily']
+            'message': 'Initiating hard restart sequence...',
+            'logs': ['Hard restart triggered, server will restart momentarily']
         })
     except Exception as e:
-        error_msg = f"Error restarting application: {str(e)}"
+        error_msg = f"Error initiating application restart: {str(e)}"
         logger.error(error_msg)
         return jsonify({
             'success': False,
