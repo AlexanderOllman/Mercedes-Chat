@@ -11,5 +11,4 @@ faiss-cpu
 python-dotenv
 pillow
 weaviate-client
-tensorflow
 numpy
