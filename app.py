@@ -1306,27 +1306,23 @@ def list_weaviate_schemas():
                 'error': 'Failed to connect to Weaviate'
             }), 400
             
-        # Get schema details
-        schema = weaviate_client.schema.get()
+        # Get collections using the new API
+        collections_list = weaviate_client.collections.list()
         
-        # Extract classes (collections)
+        # Extract collection information
         collections = []
-        for class_obj in schema.get('classes', []):
-            class_name = class_obj.get('class')
+        for collection in collections_list:
+            class_name = collection.name
             
-            # Get object count for this class
+            # Get object count for this collection
             try:
-                count = weaviate_client.query.aggregate(class_name).with_meta_count().do()
-                object_count = count.get('data', {}).get('Aggregate', {}).get(class_name, [{}])[0].get('meta', {}).get('count', 0)
+                object_count = collection.aggregate.over_all().total_count
             except Exception as count_err:
                 logger.warning(f"Error getting count for {class_name}: {str(count_err)}")
                 object_count = -1
                 
             collections.append({
                 'name': class_name,
-                'description': class_obj.get('description', ''),
-                'vectorIndexType': class_obj.get('vectorIndexType', ''),
-                'vectorizer': class_obj.get('vectorizer', ''),
                 'count': object_count
             })
             
@@ -1334,6 +1330,7 @@ def list_weaviate_schemas():
             'success': True,
             'collections': collections
         })
+        
     except Exception as e:
         logger.error(f"Error listing Weaviate schemas: {str(e)}")
         return jsonify({
@@ -1363,25 +1360,28 @@ def list_weaviate_objects():
                 'error': 'Failed to connect to Weaviate'
             }), 400
             
-        # Get total count first
+        # Get collection
         try:
-            count_result = weaviate_client.query.aggregate(collection_name).with_meta_count().do()
-            total_count = count_result.get('data', {}).get('Aggregate', {}).get(collection_name, [{}])[0].get('meta', {}).get('count', 0)
-        except Exception as count_err:
-            logger.warning(f"Error getting count for {collection_name}: {str(count_err)}")
-            total_count = -1
+            collection = weaviate_client.collections.get(collection_name)
             
-        # Now get objects with pagination
-        try:
-            query_result = (
-                weaviate_client.query
-                .get(collection_name, ['id', 'image_url', 'description'])
-                .with_limit(limit)
-                .with_offset(offset)
-                .do()
+            # Get total count first
+            total_count = collection.aggregate.over_all().total_count
+            
+            # Now get objects with pagination
+            objects_query = collection.query.fetch_objects(
+                limit=limit,
+                offset=offset
             )
             
-            objects = query_result.get('data', {}).get('Get', {}).get(collection_name, [])
+            # Get objects data
+            objects = []
+            for obj in objects_query.objects:
+                obj_data = {
+                    'id': obj.uuid,
+                    **obj.properties
+                }
+                objects.append(obj_data)
+                
         except Exception as query_err:
             logger.error(f"Error querying objects in {collection_name}: {str(query_err)}")
             return jsonify({
