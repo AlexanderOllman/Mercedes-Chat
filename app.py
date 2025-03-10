@@ -1301,8 +1301,8 @@ def list_weaviate_schemas():
                 'error': 'Failed to connect to Weaviate'
             }), 400
             
-        # Get collections using the new API
-        collections_list = weaviate_client.collections.list()
+        # Get collections using the new API - list_all instead of list
+        collections_list = weaviate_client.collections.list_all()
         
         # Extract collection information
         collections = []
